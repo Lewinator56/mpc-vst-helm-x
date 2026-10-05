@@ -55,6 +55,9 @@ python3 ../../mpc-vst-plugins/tools/release.py \
   --version "1.0.0" \
   --extra "patches:patches" \
   --about "Helm polyphonic synthesizer for Akai MPC" \
+  --id "helm" \
+  --repo "Lewinator56/mpc-vst-helm" \
+  --license "GPL-3.0-only" \
   -o dist
 
 echo "=== BUILD COMPLETE ==="
