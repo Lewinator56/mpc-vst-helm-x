@@ -1,7 +1,7 @@
 {
-  "name": "Helm",
-  "vendor": "Matt Tytel",
-  "uid": "Helm",
+  "name": "HelmX",
+  "vendor": "Lewinator56",
+  "uid": "HlmX",
   "version": 1000,
   "so": "helm.so",
   "params": "params.json",
@@ -9,7 +9,7 @@
   "art": "html",
   "defines": {
     "MODULE_SUBDIR": "\"patches\"",
-    "MODULE_DIR": "\"/sdcard/Synths/Matt Tytel - VST - Helm/patches\""
+    "MODULE_DIR": "\"/sdcard/Synths/Lewinator56 - VST - HelmX/patches\""
   },
   "build": {
     "root": ".",

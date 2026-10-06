@@ -170,7 +170,7 @@ struct HelmInstance {
     int current_preset = 0;
     std::string current_patch_name = "Init";
     std::string current_folder_name = "All";
-    std::string current_author = "Matt Tytel";
+    std::string current_author = "Lewinator56";
 
     int browse_bank = 0;
     int browse_page = 0;
@@ -340,7 +340,7 @@ struct HelmInstance {
                 }
                 std::string base = (slash1 != std::string::npos) ? f.substr(slash1 + 1) : f;
                 pe.name = base.substr(0, base.size() - 5);
-                pe.author = "Matt Tytel";
+                pe.author = "Lewinator56";
 
                 bool duplicate = false;
                 for (const auto& existing : patches) {
@@ -532,6 +532,8 @@ static void *helm_create(const char *data_dir) {
         search_paths.push_back(std::string(data_dir) + "/Factory Presets");
         search_paths.push_back(std::string(data_dir) + "/patches/Factory Presets");
     }
+    search_paths.push_back("/sdcard/Synths/Lewinator56 - VST - HelmX/patches");
+    search_paths.push_back("/sdcard/Synths/Lewinator56 - VST - HelmX/patches/Factory Presets");
     search_paths.push_back("/sdcard/Synths/Matt Tytel - VST - Helm/patches");
     search_paths.push_back("/sdcard/Synths/Matt Tytel - VST - Helm/patches/Factory Presets");
     search_paths.push_back("./patches");

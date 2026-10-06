@@ -23,7 +23,18 @@ from PIL import Image, ImageDraw, ImageFont
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
-SKIN_DIR = os.path.join(ROOT, "build", "skin", "Matt Tytel - VST - Helm", "Plugin Skins")
+VST_JSON = os.path.join(ROOT, "vst.json")
+vendor = "Lewinator56"
+plugin_name = "HelmX"
+if os.path.exists(VST_JSON):
+    try:
+        with open(VST_JSON) as f:
+            _v = json.load(f)
+            vendor = _v.get("vendor", vendor)
+            plugin_name = _v.get("name", plugin_name)
+    except Exception:
+        pass
+SKIN_DIR = os.path.join(ROOT, "build", "skin", f"{vendor} - VST - {plugin_name}", "Plugin Skins")
 TUI_PATH = os.path.join(SKIN_DIR, "TUI.json")
 
 SS = 4                    # 4x supersampling for ultra-crisp antialiasing

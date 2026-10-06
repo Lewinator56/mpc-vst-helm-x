@@ -38,27 +38,28 @@ echo "Highest glibc symbol: $(readelf -V build/helm.so | grep -o 'GLIBC_[0-9.]*'
 ls -lh build/helm.so
 
 echo "=== 4. Packaging Release Bundle ==="
-PACKAGE_DIR="build/package/Matt Tytel - VST - Helm"
+PACKAGE_NAME="Lewinator56 - VST - HelmX"
+PACKAGE_DIR="build/package/$PACKAGE_NAME"
 rm -rf "$PACKAGE_DIR"
 mkdir -p "$PACKAGE_DIR"
-cp -r "build/skin/Matt Tytel - VST - Helm/"* "$PACKAGE_DIR/"
+cp -r "build/skin/$PACKAGE_NAME/"* "$PACKAGE_DIR/"
 cp build/helm.so "$PACKAGE_DIR/"
 cp -r patches "$PACKAGE_DIR/"
 if [ -f build/pluginlist-entry.xml ]; then
-  sed 's|file="[^"]*helm.so"|file="%payload-path%/Matt Tytel - VST - Helm/helm.so"|' build/pluginlist-entry.xml > "$PACKAGE_DIR/plugin-meta.xml"
+  sed "s|file=\"[^\"]*helm.so\"|file=\"%payload-path%/$PACKAGE_NAME/helm.so\"|" build/pluginlist-entry.xml > "$PACKAGE_DIR/plugin-meta.xml"
 fi
 
 python3 ../../mpc-vst-plugins/tools/release.py \
   --so build/helm.so \
-  --skin "build/skin/Matt Tytel - VST - Helm" \
+  --skin "build/skin/$PACKAGE_NAME" \
   --entry build/pluginlist-entry.xml \
   --version "1.0.0" \
   --extra "patches:patches" \
-  --about "Helm polyphonic synthesizer for Akai MPC" \
-  --id "helm" \
-  --repo "Lewinator56/mpc-vst-helm" \
+  --about "HelmX extended polyphonic synthesizer for Akai MPC" \
+  --id "helm-x" \
+  --repo "Lewinator56/mpc-vst-helm-x" \
   --license "GPL-3.0-only" \
   -o dist
 
 echo "=== BUILD COMPLETE ==="
-echo "Plugin packaged at: $PACKAGE_DIR and dist/Helm-1.0.0-mpc-armv7.zip"
+echo "Plugin packaged at: $PACKAGE_DIR and dist/HelmX-1.0.0-mpc-armv7.zip"
