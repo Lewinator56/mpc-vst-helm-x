@@ -29,6 +29,6 @@ Author / Vendor: **Lewinator56**
   - Identified and resolved load-time crash / segfault caused by `BypassRouter` output initialization:
     - `BypassRouter` instances (`stutter_container`, `formant_container_`, `delay_container`, `reverb_container`) were allocating empty outputs in constructor and then registering additional outputs, resulting in null/unconnected audio output index lookups.
     - Output registrations in `HelmVoiceHandler` constructor were properly aligned.
-  - Added native offline testing suite (`tests/test_offline.cpp`) testing VST initialization, sample rate/block size negotiation, 50-block audio rendering, parameter get/set, state chunk serialization, note triggers, and hard stereo panning isolation under AddressSanitizer and UndefinedBehaviorSanitizer.
+  - Resolved mono retrigger / voice envelope reset issue: `helm_create` previously loaded `g_patches[0]` on startup (`COA Insane Gamer.helm`, which is a monophonic patch with `polyphony: 1, legato: 1`), causing voice envelopes to restart when notes overlap/release. Updated `helm_adapter.cpp` to explicitly find and load the `"Init"` patch (`polyphony: 6, legato: 0`) as the startup preset.
   - Verified ARMv7 build and regenerated release ZIP bundle.
 

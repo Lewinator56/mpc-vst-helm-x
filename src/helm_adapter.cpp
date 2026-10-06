@@ -547,7 +547,18 @@ static void *helm_create(const char *data_dir) {
             closedir(test_d);
             inst->scan_patches_dir(path);
             if (!inst->patches.empty()) {
-                inst->load_preset(0);
+                int init_idx = -1;
+                for (size_t i = 0; i < inst->patches.size(); ++i) {
+                    if (inst->patches[i].name == "Init") {
+                        init_idx = (int)i;
+                        break;
+                    }
+                }
+                if (init_idx >= 0) {
+                    inst->load_patch_by_global_index(init_idx);
+                } else {
+                    inst->load_preset(0);
+                }
                 break;
             }
         }

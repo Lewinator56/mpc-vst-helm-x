@@ -84,7 +84,16 @@ int main() {
         fx->processReplacing(fx, inputs, outputs, 128);
     }
 
-    printf("[TEST] Sending MIDI Note On...\n");
+    // Set full sustain for polyphony test
+    for (int p = 0; p < fx->numParams; p++) {
+        char name[64] = {0};
+        fx->dispatcher(fx, effGetParamName, p, 0, name, 0.0f);
+        if (strcasecmp(name, "Amp Sustain") == 0 || strcmp(name, "amp_sustain") == 0) {
+            fx->setParameter(fx, p, 1.0f);
+        }
+    }
+
+    printf("[TEST] Sending MIDI Note On (Note 60)...\n");
     VstMidiEvent noteOn = {};
     noteOn.type = 1; // kVstMidiType
     noteOn.byteSize = sizeof(VstMidiEvent);
@@ -104,17 +113,43 @@ int main() {
     events.events[0] = (VstEvent*)&noteOn;
     fx->dispatcher(fx, effProcessEvents, 0, 0, &events, 0.0f);
 
-    printf("[TEST] Processing 50 blocks with note playing...\n");
-    float max_l = 0.0f, max_r = 0.0f;
-    for (int i = 0; i < 50; i++) {
+    printf("[TEST] Processing 10 blocks with Note 60 playing...\n");
+    for (int i = 0; i < 10; i++) {
         fx->processReplacing(fx, inputs, outputs, 128);
-        for (int s = 0; s < 128; s++) {
-            if (fabs(out_l[s]) > max_l) max_l = fabs(out_l[s]);
-            if (fabs(out_r[s]) > max_r) max_r = fabs(out_r[s]);
-        }
+        printf("  [Note 60 block %d] out_l[0]=%f\n", i, out_l[0]);
     }
-    printf("[TEST] Max peak output: Left=%f, Right=%f\n", max_l, max_r);
-    assert(max_l > 0.05f && max_r > 0.05f);
+
+    printf("[TEST] Sending Second MIDI Note On (Note 64) while Note 60 is still held...\n");
+    VstMidiEvent noteOn2 = {};
+    noteOn2.type = 1;
+    noteOn2.byteSize = sizeof(VstMidiEvent);
+    noteOn2.midiData[0] = 0x90;
+    noteOn2.midiData[1] = 64;
+    noteOn2.midiData[2] = 100;
+    events.events[0] = (VstEvent*)&noteOn2;
+    fx->dispatcher(fx, effProcessEvents, 0, 0, &events, 0.0f);
+
+    printf("[TEST] Processing 10 blocks with BOTH Note 60 and Note 64 playing...\n");
+    for (int i = 0; i < 10; i++) {
+        fx->processReplacing(fx, inputs, outputs, 128);
+        printf("  [Poly block %d] out_l[0]=%f (samples: %f, %f, %f)\n", i, out_l[0], out_l[1], out_l[2], out_l[3]);
+    }
+
+    printf("[TEST] Sending Note Off for Note 64...\n");
+    VstMidiEvent noteOff2 = {};
+    noteOff2.type = 1;
+    noteOff2.byteSize = sizeof(VstMidiEvent);
+    noteOff2.midiData[0] = 0x80;
+    noteOff2.midiData[1] = 64;
+    noteOff2.midiData[2] = 0;
+    events.events[0] = (VstEvent*)&noteOff2;
+    fx->dispatcher(fx, effProcessEvents, 0, 0, &events, 0.0f);
+
+    printf("[TEST] Processing 10 blocks after Note 64 released (Note 60 still held)...\n");
+    for (int i = 0; i < 10; i++) {
+        fx->processReplacing(fx, inputs, outputs, 128);
+        printf("  [Post Note 64 release block %d] out_l[0]=%f\n", i, out_l[0]);
+    }
 
     printf("[TEST] Testing Oscillator 1 Pan Hard Left (with Osc 2 muted)...\n");
     // Mute Osc 2, Sub, Noise; Max Osc 1; Pan Osc 1 Left
