@@ -167,7 +167,8 @@ namespace mopo {
     addProcessor(voice_handler_);
 
     // Distortion
-    Distortion* distortion = new Distortion();
+    Distortion* distortion_left = new Distortion();
+    Distortion* distortion_right = new Distortion();
     Value* distortion_on = createBaseControl("distortion_on");
     Value* distortion_type = createBaseControl("distortion_type");
     Output* distortion_drive = createMonoModControl("distortion_drive", true);
@@ -175,12 +176,20 @@ namespace mopo {
     cr::MagnitudeScale* distortion_gain = new cr::MagnitudeScale();
     distortion_gain->plug(distortion_drive);
 
-    distortion->plug(voice_handler_, Distortion::kAudio);
-    distortion->plug(distortion_on, Distortion::kOn);
-    distortion->plug(distortion_type, Distortion::kType);
-    distortion->plug(distortion_gain, Distortion::kDrive);
-    distortion->plug(distortion_mix, Distortion::kMix);
-    addProcessor(distortion);
+    distortion_left->plug(voice_handler_->output(0), Distortion::kAudio);
+    distortion_left->plug(distortion_on, Distortion::kOn);
+    distortion_left->plug(distortion_type, Distortion::kType);
+    distortion_left->plug(distortion_gain, Distortion::kDrive);
+    distortion_left->plug(distortion_mix, Distortion::kMix);
+
+    distortion_right->plug(voice_handler_->output(1), Distortion::kAudio);
+    distortion_right->plug(distortion_on, Distortion::kOn);
+    distortion_right->plug(distortion_type, Distortion::kType);
+    distortion_right->plug(distortion_gain, Distortion::kDrive);
+    distortion_right->plug(distortion_mix, Distortion::kMix);
+
+    addProcessor(distortion_left);
+    addProcessor(distortion_right);
     addProcessor(distortion_gain);
 
     // Delay effect.
@@ -200,28 +209,41 @@ namespace mopo {
     cr::FrequencyToSamples* delay_samples = new cr::FrequencyToSamples();
     delay_samples->plug(delay_frequency_smoothed);
 
-    Delay* delay = new Delay(MAX_DELAY_SAMPLES);
-    delay->plug(distortion, Delay::kAudio);
-    delay->plug(delay_samples, Delay::kSampleDelay);
-    delay->plug(delay_feedback_clamped, Delay::kFeedback);
-    delay->plug(delay_wet, Delay::kWet);
+    Delay* delay_left = new Delay(MAX_DELAY_SAMPLES);
+    delay_left->plug(distortion_left, Delay::kAudio);
+    delay_left->plug(delay_samples, Delay::kSampleDelay);
+    delay_left->plug(delay_feedback_clamped, Delay::kFeedback);
+    delay_left->plug(delay_wet, Delay::kWet);
 
-    BypassRouter* delay_container = new BypassRouter();
-    delay_container->plug(delay_on, BypassRouter::kOn);
-    delay_container->plug(distortion, BypassRouter::kAudio);
+    Delay* delay_right = new Delay(MAX_DELAY_SAMPLES);
+    delay_right->plug(distortion_right, Delay::kAudio);
+    delay_right->plug(delay_samples, Delay::kSampleDelay);
+    delay_right->plug(delay_feedback_clamped, Delay::kFeedback);
+    delay_right->plug(delay_wet, Delay::kWet);
+
+    BypassRouter* delay_container = new BypassRouter(3, 2);
+    delay_container->plug(distortion_left, 0);
+    delay_container->plug(distortion_right, 1);
+    delay_container->plug(delay_on, 2);
     delay_container->addProcessor(delay_feedback_clamped);
     delay_container->addProcessor(delay_frequency_smoothed);
     delay_container->addProcessor(delay_samples);
-    delay_container->addProcessor(delay);
-    delay_container->registerOutput(delay->output());
+    delay_container->addProcessor(delay_left);
+    delay_container->addProcessor(delay_right);
+    delay_container->registerOutput(delay_left->output());
+    delay_container->registerOutput(delay_right->output());
 
     addProcessor(delay_container);
 
     // DC Blocker.
-    DcFilter* dc_filter = new DcFilter();
-    dc_filter->plug(delay_container, DcFilter::kAudio);
+    DcFilter* dc_filter_left = new DcFilter();
+    dc_filter_left->plug(delay_container->output(0), DcFilter::kAudio);
 
-    addProcessor(dc_filter);
+    DcFilter* dc_filter_right = new DcFilter();
+    dc_filter_right->plug(delay_container->output(1), DcFilter::kAudio);
+
+    addProcessor(dc_filter_left);
+    addProcessor(dc_filter_right);
 
     // Reverb Effect.
     Output* reverb_feedback = createMonoModControl("reverb_feedback", true);
@@ -233,14 +255,16 @@ namespace mopo {
     reverb_feedback_clamped->plug(reverb_feedback);
 
     Reverb* reverb = new Reverb();
-    reverb->plug(dc_filter, Reverb::kAudio);
+    reverb->plug(dc_filter_left, Reverb::kAudio);
+    reverb->plug(dc_filter_right, Reverb::kAudioRight);
     reverb->plug(reverb_feedback_clamped, Reverb::kFeedback);
     reverb->plug(reverb_damping, Reverb::kDamping);
     reverb->plug(reverb_wet, Reverb::kWet);
 
-    BypassRouter* reverb_container = new BypassRouter();
-    reverb_container->plug(reverb_on, BypassRouter::kOn);
-    reverb_container->plug(dc_filter, BypassRouter::kAudio);
+    BypassRouter* reverb_container = new BypassRouter(3, 2);
+    reverb_container->plug(dc_filter_left, 0);
+    reverb_container->plug(dc_filter_right, 1);
+    reverb_container->plug(reverb_on, 2);
     reverb_container->addProcessor(reverb);
     reverb_container->addProcessor(reverb_feedback_clamped);
     reverb_container->registerOutput(reverb->output(0));

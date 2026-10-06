@@ -26,22 +26,30 @@ namespace mopo {
   Reverb::Reverb() : ProcessorRouter(kNumInputs, 2), current_dry_(0.0), current_wet_(0.0) {
     static const Value gain(FIXED_GAIN);
     
-    Bypass* audio_input = new Bypass();
+    Bypass* audio_input_left = new Bypass();
+    Bypass* audio_input_right = new Bypass();
     LinearSmoothBuffer* feedback_input = new LinearSmoothBuffer();
     cr::Clamp* damping_clamp = new cr::Clamp(0.0f, 1.0f);
     LinearSmoothBuffer* damping_input = new LinearSmoothBuffer();
 
-    registerInput(audio_input->input(), kAudio);
+    registerInput(audio_input_left->input(), kAudio);
+    registerInput(audio_input_right->input(), kAudioRight);
     registerInput(feedback_input->input(), kFeedback);
     registerInput(damping_clamp->input(0), kDamping);
     damping_input->plug(damping_clamp);
 
-    Multiply* gained_input = new Multiply();
-    gained_input->plug(audio_input, 0);
-    gained_input->plug(&gain, 1);
+    Multiply* gained_input_left = new Multiply();
+    gained_input_left->plug(audio_input_left, 0);
+    gained_input_left->plug(&gain, 1);
 
-    addProcessor(audio_input);
-    addProcessor(gained_input);
+    Multiply* gained_input_right = new Multiply();
+    gained_input_right->plug(audio_input_right, 0);
+    gained_input_right->plug(&gain, 1);
+
+    addProcessor(audio_input_left);
+    addProcessor(audio_input_right);
+    addProcessor(gained_input_left);
+    addProcessor(gained_input_right);
     addProcessor(feedback_input);
     addProcessor(damping_clamp);
     addProcessor(damping_input);
@@ -54,7 +62,7 @@ namespace mopo {
       cr::TimeToSamples* samples = new cr::TimeToSamples();
       samples->plug(time);
 
-      comb->plug(gained_input, ReverbComb::kAudio);
+      comb->plug(gained_input_left, ReverbComb::kAudio);
       comb->plug(samples, ReverbComb::kSampleDelay);
       comb->plug(feedback_input, ReverbComb::kFeedback);
       comb->plug(damping_input, ReverbComb::kDamping);
@@ -72,7 +80,7 @@ namespace mopo {
       cr::TimeToSamples* samples = new cr::TimeToSamples();
       samples->plug(time);
 
-      comb->plug(gained_input, ReverbComb::kAudio);
+      comb->plug(gained_input_right, ReverbComb::kAudio);
       comb->plug(samples, ReverbComb::kSampleDelay);
       comb->plug(feedback_input, ReverbComb::kFeedback);
       comb->plug(damping_input, ReverbComb::kDamping);
@@ -124,7 +132,8 @@ namespace mopo {
     MOPO_ASSERT(inputMatchesBufferSize(kAudio));
 
     ProcessorRouter::process();
-    const mopo_float* audio = input(kAudio)->source->buffer;
+    const mopo_float* audio_left = input(kAudio)->source->buffer;
+    const mopo_float* audio_right = (input(kAudioRight)->source) ? input(kAudioRight)->source->buffer : audio_left;
     const mopo_float* left_wet_audio = reverb_wet_left_->output()->buffer;
     const mopo_float* right_wet_audio = reverb_wet_right_->output()->buffer;
     mopo_float* dest_left = output(0)->buffer;
@@ -140,8 +149,8 @@ namespace mopo {
     for (int i = 0; i < buffer_size_; ++i) {
       mopo_float dry = current_dry_ + i * dry_inc;
       mopo_float wet = current_wet_ + i * wet_inc;
-      dest_left[i] = dry * audio[i] + wet * left_wet_audio[i];
-      dest_right[i] = dry * audio[i] + wet * right_wet_audio[i];
+      dest_left[i] = dry * audio_left[i] + wet * left_wet_audio[i];
+      dest_right[i] = dry * audio_right[i] + wet * right_wet_audio[i];
     }
 
     current_dry_ = next_dry;

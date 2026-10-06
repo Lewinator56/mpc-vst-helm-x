@@ -27,6 +27,7 @@ namespace mopo {
     public:
       enum Inputs {
         kAudio,
+        kAudioRight,
         kFeedback,
         kDamping,
         kStereoWidth,

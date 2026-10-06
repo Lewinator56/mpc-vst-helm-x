@@ -75,7 +75,7 @@ namespace mopo {
       void createModulators(Output* reset);
 
       // Create the filter and filter envelope.
-      void createFilter(Output* audio, Output* keytrack, Output* reset);
+      void createFilter(Output* audio_left, Output* audio_right, Output* keytrack, Output* reset);
 
       void setupPolyModulationReadouts();
 
@@ -88,20 +88,21 @@ namespace mopo {
       Processor* current_frequency_;
       Envelope* amplitude_envelope_;
       Processor* amplitude_;
-      SimpleDelay* osc_feedback_;
+      SimpleDelay* osc_feedback_left_;
+      SimpleDelay* osc_feedback_right_;
 
       TriggerCombiner* env_trigger_;
       Envelope* extra_envelope_;
 
       Value* legato_;
       Distortion* distorted_filter_;
-      FormantManager* formant_filter_;
       Envelope* filter_envelope_;
       BypassRouter* formant_container_;
       Output note_retriggered_;
       HelmLfo* poly_lfo_;
 
-      Multiply* output_;
+      Multiply* output_left_;
+      Multiply* output_right_;
 
       output_map poly_readouts_;
   };

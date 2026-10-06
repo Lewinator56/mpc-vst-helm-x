@@ -43,6 +43,10 @@ namespace mopo {
         kHarmonize2,
         kReset,
         kCrossMod,
+        kOscillator1Pan,
+        kOscillator2Pan,
+        kUnisonSpread1,
+        kUnisonSpread2,
         kNumInputs
       };
 
@@ -51,8 +55,8 @@ namespace mopo {
       virtual void process();
       virtual Processor* clone() const { return new HelmOscillators(*this); }
 
-      Output* getOscillator1Output() { return output(0); }
-      Output* getOscillator2Output() { return output(1); }
+      Output* getOscillator1LeftOutput() { return output(0); }
+      Output* getOscillator1RightOutput() { return output(1); }
 
     protected:
       void reset(int i);
@@ -60,6 +64,11 @@ namespace mopo {
       void computeDetuneRatios(int* detune_diffs,
                                int oscillator_diff,
                                bool harmonize, mopo_float detune,
+                               int voices);
+      void computePanningGains(mopo_float* gains_left,
+                               mopo_float* gains_right,
+                               mopo_float pan,
+                               mopo_float spread,
                                int voices);
       void prepareBuffers(mopo_float** wave_buffers,
                           const int* detune_diffs,
@@ -88,40 +97,45 @@ namespace mopo {
         int phase1 = oscillator2_cross_mods_[i] + oscillator1_phases_[0] + oscillator1_phase_diffs_[i];
         int phase2 = oscillator1_cross_mods_[i] + oscillator2_phases_[0] + oscillator2_phase_diffs_[i];
 
-        oscillator1_totals_[i] += FixedPointWave::interpretWave(wave_buffers1_[0], phase1);
-        oscillator2_totals_[i] += FixedPointWave::interpretWave(wave_buffers2_[0], phase2);
+        mopo_float sample1 = FixedPointWave::interpretWave(wave_buffers1_[0], phase1);
+        mopo_float sample2 = FixedPointWave::interpretWave(wave_buffers2_[0], phase2);
+
+        oscillator1_left_totals_[i]  += sample1 * gains_left1_[0];
+        oscillator1_right_totals_[i] += sample1 * gains_right1_[0];
+        oscillator2_left_totals_[i]  += sample2 * gains_left2_[0];
+        oscillator2_right_totals_[i] += sample2 * gains_right2_[0];
       }
 
       inline void tickVoice1(int i, int voice, const mopo_float* wave_buffer,
                              unsigned int start_phase, int detune) {
         int phase = oscillator1_cross_mods_[i] + start_phase +
                     i * detune + oscillator1_phase_diffs_[i];
-        oscillator1_totals_[i] += FixedPointWave::interpretWave(wave_buffer, phase);
+        mopo_float sample = FixedPointWave::interpretWave(wave_buffer, phase);
+        oscillator1_left_totals_[i]  += sample * gains_left1_[voice];
+        oscillator1_right_totals_[i] += sample * gains_right1_[voice];
       }
 
       inline void tickVoice2(int i, int voice, const mopo_float* wave_buffer,
                              unsigned int start_phase, int detune) {
         int phase = oscillator2_cross_mods_[i] + start_phase +
                     i * detune + oscillator2_phase_diffs_[i];
-        oscillator2_totals_[i] += FixedPointWave::interpretWave(wave_buffer, phase);
-      }
-
-      inline void tickOut(int i, mopo_float* dest,
-                          const mopo_float* amp1, const mopo_float* amp2,
-                          const mopo_float* oscillator1_totals,
-                          const mopo_float* oscillator2_totals,
-                          mopo_float scale1, mopo_float scale2) {
-        mopo_float mixed = amp1[i] * scale1 * oscillator1_totals[i] +
-                           amp2[i] * scale2 * oscillator2_totals[i];
-        dest[i] = mixed;
-        MOPO_ASSERT(std::isfinite(dest[i]));
+        mopo_float sample = FixedPointWave::interpretWave(wave_buffer, phase);
+        oscillator2_left_totals_[i]  += sample * gains_left2_[voice];
+        oscillator2_right_totals_[i] += sample * gains_right2_[voice];
       }
 
       int oscillator1_cross_mods_[MAX_BUFFER_SIZE + 1];
       int oscillator2_cross_mods_[MAX_BUFFER_SIZE + 1];
 
-      mopo_float oscillator1_totals_[MAX_BUFFER_SIZE];
-      mopo_float oscillator2_totals_[MAX_BUFFER_SIZE];
+      mopo_float oscillator1_left_totals_[MAX_BUFFER_SIZE];
+      mopo_float oscillator1_right_totals_[MAX_BUFFER_SIZE];
+      mopo_float oscillator2_left_totals_[MAX_BUFFER_SIZE];
+      mopo_float oscillator2_right_totals_[MAX_BUFFER_SIZE];
+
+      mopo_float gains_left1_[MAX_UNISON];
+      mopo_float gains_right1_[MAX_UNISON];
+      mopo_float gains_left2_[MAX_UNISON];
+      mopo_float gains_right2_[MAX_UNISON];
 
       unsigned int oscillator1_phase_base_;
       unsigned int oscillator2_phase_base_;

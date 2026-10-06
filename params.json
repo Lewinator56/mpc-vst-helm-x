@@ -176,6 +176,14 @@
       "default": 0.548
     },
     {
+      "key": "osc_1_pan",
+      "name": "Osc 1 Pan",
+      "min": -1.0,
+      "max": 1.0,
+      "default": 0.0,
+      "unit": "%"
+    },
+    {
       "key": "osc_1_unison_voices",
       "name": "Osc 1 Unison Voices",
       "min": 1,
@@ -191,6 +199,14 @@
       "max": 100.0,
       "default": 10.0,
       "unit": "ct"
+    },
+    {
+      "key": "osc_1_unison_spread",
+      "name": "Osc 1 Unison Spread",
+      "min": 0.0,
+      "max": 1.0,
+      "default": 1.0,
+      "unit": "%"
     },
     {
       "key": "unison_1_harmonize",
@@ -277,6 +293,14 @@
       "default": 0.548
     },
     {
+      "key": "osc_2_pan",
+      "name": "Osc 2 Pan",
+      "min": -1.0,
+      "max": 1.0,
+      "default": 0.0,
+      "unit": "%"
+    },
+    {
       "key": "osc_2_unison_voices",
       "name": "Osc 2 Unison Voices",
       "min": 1,
@@ -292,6 +316,14 @@
       "max": 100.0,
       "default": 10.0,
       "unit": "ct"
+    },
+    {
+      "key": "osc_2_unison_spread",
+      "name": "Osc 2 Unison Spread",
+      "min": 0.0,
+      "max": 1.0,
+      "default": 1.0,
+      "unit": "%"
     },
     {
       "key": "unison_2_harmonize",

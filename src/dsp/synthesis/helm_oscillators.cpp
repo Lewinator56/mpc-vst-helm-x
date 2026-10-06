@@ -32,7 +32,7 @@ namespace mopo {
       sqrt(1.0 / 8.0), sqrt(1.0 / 8.0),
   };
 
-  HelmOscillators::HelmOscillators() : Processor(kNumInputs, 1) {
+  HelmOscillators::HelmOscillators() : Processor(kNumInputs, 2) {
     utils::zeroBuffer(oscillator1_cross_mods_, MAX_BUFFER_SIZE + 1);
     utils::zeroBuffer(oscillator2_cross_mods_, MAX_BUFFER_SIZE + 1);
 
@@ -46,11 +46,19 @@ namespace mopo {
       wave_buffers2_[v] = nullptr;
       detune_diffs1_[v] = 0;
       detune_diffs2_[v] = 0;
+      gains_left1_[v] = 0.70710678f;
+      gains_right1_[v] = 0.70710678f;
+      gains_left2_[v] = 0.70710678f;
+      gains_right2_[v] = 0.70710678f;
     }
 
     for (int i = 0; i < MAX_BUFFER_SIZE; ++i) {
       oscillator1_phase_diffs_[i] = 0;
       oscillator2_phase_diffs_[i] = 0;
+      oscillator1_left_totals_[i] = 0.0f;
+      oscillator1_right_totals_[i] = 0.0f;
+      oscillator2_left_totals_[i] = 0.0f;
+      oscillator2_right_totals_[i] = 0.0f;
     }
   }
 
@@ -110,6 +118,29 @@ namespace mopo {
     }
   }
 
+  void HelmOscillators::computePanningGains(mopo_float* gains_left,
+                                           mopo_float* gains_right,
+                                           mopo_float pan,
+                                           mopo_float spread,
+                                           int voices) {
+    pan = utils::clamp(pan, -1.0f, 1.0f);
+    spread = utils::clamp(spread, 0.0f, 1.0f);
+    const mopo_float pi_over_4 = 0.7853981633974483f;
+
+    for (int v = 0; v < MAX_UNISON; ++v) {
+      mopo_float pan_v = pan;
+      if (voices > 1 && v > 0) {
+        mopo_float spread_offset = (spread * ((v + 1) / 2)) / ((voices + 1.0f) / 2.0f);
+        if (v % 2)
+          spread_offset = -spread_offset;
+        pan_v = utils::clamp(pan + spread_offset, -1.0f, 1.0f);
+      }
+      mopo_float angle = (pan_v + 1.0f) * pi_over_4;
+      gains_left[v] = cosf(angle);
+      gains_right[v] = sinf(angle);
+    }
+  }
+
   void HelmOscillators::prepareBuffers(mopo_float** wave_buffers,
                                        const int* detune_diffs,
                                        const int* oscillator_phase_diffs,
@@ -130,10 +161,18 @@ namespace mopo {
     mopo_float harmonize1 = input(kHarmonize1)->source->buffer[0];
     mopo_float harmonize2 = input(kHarmonize2)->source->buffer[0];
 
+    mopo_float pan1 = input(kOscillator1Pan)->source->buffer[0];
+    mopo_float pan2 = input(kOscillator2Pan)->source->buffer[0];
+    mopo_float spread1 = input(kUnisonSpread1)->source->buffer[0];
+    mopo_float spread2 = input(kUnisonSpread2)->source->buffer[0];
+
     computeDetuneRatios(detune_diffs1_, oscillator1_phase_diffs_[0],
                         harmonize1, detune1, voices1);
     computeDetuneRatios(detune_diffs2_, oscillator2_phase_diffs_[0],
                         harmonize2, detune2, voices2);
+
+    computePanningGains(gains_left1_, gains_right1_, pan1, spread1, voices1);
+    computePanningGains(gains_left2_, gains_right2_, pan2, spread2, voices2);
 
     int wave1 = static_cast<int>(input(kOscillator1Waveform)->source->buffer[0] + 0.5);
     int wave2 = static_cast<int>(input(kOscillator2Waveform)->source->buffer[0] + 0.5);
@@ -185,8 +224,10 @@ namespace mopo {
     int voices1 = utils::iclamp(input(kUnisonVoices1)->source->buffer[0], 1, MAX_UNISON);
     int voices2 = utils::iclamp(input(kUnisonVoices2)->source->buffer[0], 1, MAX_UNISON);
 
-    utils::zeroBuffer(oscillator1_totals_, buffer_size_);
-    utils::zeroBuffer(oscillator2_totals_, buffer_size_);
+    utils::zeroBuffer(oscillator1_left_totals_, buffer_size_);
+    utils::zeroBuffer(oscillator1_right_totals_, buffer_size_);
+    utils::zeroBuffer(oscillator2_left_totals_, buffer_size_);
+    utils::zeroBuffer(oscillator2_right_totals_, buffer_size_);
 
     int j = 0;
     if (input(kReset)->source->triggered) {
@@ -243,15 +284,22 @@ namespace mopo {
     mopo_float scale1 = scales[voices1];
     mopo_float scale2 = scales[voices2];
 
-    mopo_float* dest = output()->buffer;
+    mopo_float* dest_left = output(0)->buffer;
+    mopo_float* dest_right = output(1)->buffer;
     const mopo_float* amp1 = input(kOscillator1Amplitude)->source->buffer;
     const mopo_float* amp2 = input(kOscillator2Amplitude)->source->buffer;
-    const mopo_float* oscillator1_totals = oscillator1_totals_;
-    const mopo_float* oscillator2_totals = oscillator2_totals_;
+    const mopo_float* osc1_l = oscillator1_left_totals_;
+    const mopo_float* osc1_r = oscillator1_right_totals_;
+    const mopo_float* osc2_l = oscillator2_left_totals_;
+    const mopo_float* osc2_r = oscillator2_right_totals_;
 
     VECTORIZE_LOOP
-    for (int j = 0; j < buffer_size_; ++j)
-      tickOut(j, dest, amp1, amp2, oscillator1_totals, oscillator2_totals, scale1, scale2);
+    for (int j = 0; j < buffer_size_; ++j) {
+      dest_left[j]  = amp1[j] * scale1 * osc1_l[j] + amp2[j] * scale2 * osc2_l[j];
+      dest_right[j] = amp1[j] * scale1 * osc1_r[j] + amp2[j] * scale2 * osc2_r[j];
+      MOPO_ASSERT(std::isfinite(dest_left[j]));
+      MOPO_ASSERT(std::isfinite(dest_right[j]));
+    }
 
     oscillator1_cross_mods_[0] = oscillator1_cross_mods_[buffer_size_];
     oscillator2_cross_mods_[0] = oscillator2_cross_mods_[buffer_size_];

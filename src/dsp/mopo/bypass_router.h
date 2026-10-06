@@ -26,11 +26,12 @@ namespace mopo {
     public:
       enum Inputs {
         kAudio,
+        kAudioRight,
         kOn,
         kNumInputs
       };
 
-      BypassRouter(int num_inputs = kNumInputs, int num_outputs = 0);
+      BypassRouter(int num_inputs = 2, int num_outputs = 0);
 
       virtual Processor* clone() const override {
         return new BypassRouter(*this);
