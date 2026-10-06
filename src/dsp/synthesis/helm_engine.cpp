@@ -221,7 +221,7 @@ namespace mopo {
     delay_right->plug(delay_feedback_clamped, Delay::kFeedback);
     delay_right->plug(delay_wet, Delay::kWet);
 
-    BypassRouter* delay_container = new BypassRouter(3, 2);
+    BypassRouter* delay_container = new BypassRouter(3, 0);
     delay_container->plug(distortion_left, 0);
     delay_container->plug(distortion_right, 1);
     delay_container->plug(delay_on, 2);
@@ -261,7 +261,7 @@ namespace mopo {
     reverb->plug(reverb_damping, Reverb::kDamping);
     reverb->plug(reverb_wet, Reverb::kWet);
 
-    BypassRouter* reverb_container = new BypassRouter(3, 2);
+    BypassRouter* reverb_container = new BypassRouter(3, 0);
     reverb_container->plug(dc_filter_left, 0);
     reverb_container->plug(dc_filter_right, 1);
     reverb_container->plug(reverb_on, 2);

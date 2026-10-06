@@ -25,4 +25,10 @@ Author / Vendor: **Lewinator56**
   - Name: `HelmX`
   - Plugin UID: `HlmX`
   - Release Package: `dist/HelmX-1.0.0-mpc-armv7.zip` containing `Lewinator56 - VST - HelmX` synth bundle.
+- **Offline Testing & Bug Fixes**:
+  - Identified and resolved load-time crash / segfault caused by `BypassRouter` output initialization:
+    - `BypassRouter` instances (`stutter_container`, `formant_container_`, `delay_container`, `reverb_container`) were allocating empty outputs in constructor and then registering additional outputs, resulting in null/unconnected audio output index lookups.
+    - Output registrations in `HelmVoiceHandler` constructor were properly aligned.
+  - Added native offline testing suite (`tests/test_offline.cpp`) testing VST initialization, sample rate/block size negotiation, 50-block audio rendering, parameter get/set, state chunk serialization, note triggers, and hard stereo panning isolation under AddressSanitizer and UndefinedBehaviorSanitizer.
+  - Verified ARMv7 build and regenerated release ZIP bundle.
 

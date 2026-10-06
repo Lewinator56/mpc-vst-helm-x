@@ -95,6 +95,10 @@ namespace mopo {
   HelmVoiceHandler::HelmVoiceHandler(Output* beats_per_second) :
       ProcessorRouter(VoiceHandler::kNumInputs, 0), VoiceHandler(MAX_POLYPHONY),
       beats_per_second_(beats_per_second) {
+    output_left_ = new Multiply();
+    output_right_ = new Multiply();
+    registerOutput(output_left_->output());
+    registerOutput(output_right_->output());
   }
 
   void HelmVoiceHandler::init() {
@@ -137,9 +141,6 @@ namespace mopo {
     addProcessor(aftertouch_value);
     mod_sources_["aftertouch"] = aftertouch_value->output();
 
-    output_left_ = new Multiply();
-    output_right_ = new Multiply();
-
     output_left_->plug(formant_container_->output(0), 0);
     output_left_->plug(amplitude_, 1);
 
@@ -148,8 +149,6 @@ namespace mopo {
 
     addProcessor(output_left_);
     addProcessor(output_right_);
-    registerOutput(output_left_->output());
-    registerOutput(output_right_->output());
 
     setVoiceKiller(amplitude_->output());
 
@@ -539,7 +538,7 @@ namespace mopo {
     mod_sources_["fil_envelope_phase"] = registerOutput(filter_envelope_->output(Envelope::kPhase));
 
     // Stutter.
-    BypassRouter* stutter_container = new BypassRouter(3, 2);
+    BypassRouter* stutter_container = new BypassRouter(3, 0);
     addProcessor(stutter_container);
 
     ValueSwitch* stutter_on = createBaseSwitchControl("stutter_on");
@@ -577,7 +576,7 @@ namespace mopo {
     stutter_container->registerOutput(stutter_right->output());
 
     // Formant Filter.
-    formant_container_ = new BypassRouter(3, 2);
+    formant_container_ = new BypassRouter(3, 0);
     addProcessor(formant_container_);
 
     ValueSwitch* formant_on = createBaseSwitchControl("formant_on");
