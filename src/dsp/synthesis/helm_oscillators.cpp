@@ -125,7 +125,6 @@ namespace mopo {
                                            int voices) {
     pan = utils::clamp(pan, -1.0f, 1.0f);
     spread = utils::clamp(spread, 0.0f, 1.0f);
-    const mopo_float pi_over_4 = 0.7853981633974483f;
 
     for (int v = 0; v < MAX_UNISON; ++v) {
       mopo_float pan_v = pan;
@@ -135,9 +134,13 @@ namespace mopo {
           spread_offset = -spread_offset;
         pan_v = utils::clamp(pan + spread_offset, -1.0f, 1.0f);
       }
-      mopo_float angle = (pan_v + 1.0f) * pi_over_4;
-      gains_left[v] = cosf(angle);
-      gains_right[v] = sinf(angle);
+      if (pan_v <= 0.0f) {
+        gains_left[v] = 1.0f;
+        gains_right[v] = 1.0f + pan_v;
+      } else {
+        gains_left[v] = 1.0f - pan_v;
+        gains_right[v] = 1.0f;
+      }
     }
   }
 

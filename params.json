@@ -1454,7 +1454,11 @@
         "Mod Attack",
         "Mod Decay",
         "Mod Sustain",
-        "Mod Release"
+        "Mod Release",
+        "Osc 1 Pan",
+        "Osc 1 Unison Spread",
+        "Osc 2 Pan",
+        "Osc 2 Unison Spread"
       ],
       "default": 0
     },
@@ -1545,7 +1549,11 @@
         "Mod Attack",
         "Mod Decay",
         "Mod Sustain",
-        "Mod Release"
+        "Mod Release",
+        "Osc 1 Pan",
+        "Osc 1 Unison Spread",
+        "Osc 2 Pan",
+        "Osc 2 Unison Spread"
       ],
       "default": 0
     },
@@ -1636,7 +1644,11 @@
         "Mod Attack",
         "Mod Decay",
         "Mod Sustain",
-        "Mod Release"
+        "Mod Release",
+        "Osc 1 Pan",
+        "Osc 1 Unison Spread",
+        "Osc 2 Pan",
+        "Osc 2 Unison Spread"
       ],
       "default": 0
     },
@@ -1727,7 +1739,11 @@
         "Mod Attack",
         "Mod Decay",
         "Mod Sustain",
-        "Mod Release"
+        "Mod Release",
+        "Osc 1 Pan",
+        "Osc 1 Unison Spread",
+        "Osc 2 Pan",
+        "Osc 2 Unison Spread"
       ],
       "default": 0
     },
@@ -1818,7 +1834,11 @@
         "Mod Attack",
         "Mod Decay",
         "Mod Sustain",
-        "Mod Release"
+        "Mod Release",
+        "Osc 1 Pan",
+        "Osc 1 Unison Spread",
+        "Osc 2 Pan",
+        "Osc 2 Unison Spread"
       ],
       "default": 0
     },
@@ -1909,7 +1929,11 @@
         "Mod Attack",
         "Mod Decay",
         "Mod Sustain",
-        "Mod Release"
+        "Mod Release",
+        "Osc 1 Pan",
+        "Osc 1 Unison Spread",
+        "Osc 2 Pan",
+        "Osc 2 Unison Spread"
       ],
       "default": 0
     },
@@ -2000,7 +2024,11 @@
         "Mod Attack",
         "Mod Decay",
         "Mod Sustain",
-        "Mod Release"
+        "Mod Release",
+        "Osc 1 Pan",
+        "Osc 1 Unison Spread",
+        "Osc 2 Pan",
+        "Osc 2 Unison Spread"
       ],
       "default": 0
     },
@@ -2091,7 +2119,11 @@
         "Mod Attack",
         "Mod Decay",
         "Mod Sustain",
-        "Mod Release"
+        "Mod Release",
+        "Osc 1 Pan",
+        "Osc 1 Unison Spread",
+        "Osc 2 Pan",
+        "Osc 2 Unison Spread"
       ],
       "default": 0
     },

@@ -67,16 +67,12 @@ static const char* const MOD_DESTS[] = {
     "osc_1_transpose",
     "osc_1_tune",
     "osc_1_volume",
-    "osc_1_pan",
     "osc_1_unison_detune",
-    "osc_1_unison_spread",
     "osc_2_waveform",
     "osc_2_transpose",
     "osc_2_tune",
     "osc_2_volume",
-    "osc_2_pan",
     "osc_2_unison_detune",
-    "osc_2_unison_spread",
     "cross_modulation",
     "osc_feedback_amount",
     "sub_waveform",
@@ -114,7 +110,11 @@ static const char* const MOD_DESTS[] = {
     "mod_attack",
     "mod_decay",
     "mod_sustain",
-    "mod_release"
+    "mod_release",
+    "osc_1_pan",
+    "osc_1_unison_spread",
+    "osc_2_pan",
+    "osc_2_unison_spread"
 };
 static const int NUM_MOD_DESTS = sizeof(MOD_DESTS) / sizeof(MOD_DESTS[0]);
 
