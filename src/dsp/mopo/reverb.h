@@ -26,7 +26,7 @@ namespace mopo {
   class Reverb : public ProcessorRouter {
     public:
       enum Inputs {
-        kAudio,
+        kAudioLeft,
         kAudioRight,
         kFeedback,
         kDamping,

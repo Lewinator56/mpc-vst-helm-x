@@ -6,14 +6,18 @@ Author / Vendor: **Lewinator56**
 
 ## Status & Progress
 - **Project Setup & Git**: Initialized from `mpc-vst-helm` base codebase into `mpc-vst-helm-x`. Remote connected to `https://github.com/Lewinator56/mpc-vst-helm-x.git` (`master` branch).
-- **DSP Engine Upgrades**:
-  - **Stereo Unison Spread & Oscillator Panning**:
-    - Enhanced `HelmOscillators` to generate dual-channel stereo output (`left_output`, `right_output`).
-    - Added per-oscillator equal-power stereo panning (`osc_1_pan`, `osc_2_pan`).
-    - Added unison voice stereo spread (`osc_1_unison_spread`, `osc_2_unison_spread`) spreading detuned unison voices across left and right channels based on their detune offset.
-    - Updated `HelmVoiceHandler` voice processing chain to true stereo (stereo sub/noise sum, dual feedback delays, dual state-variable filters, dual stutter instances, dual formant filters, dual voice amp multiplier).
-    - Updated `HelmEngine` engine master effects to true stereo (dual distortion, dual delays, dual DC blockers, stereo-input reverb).
-    - Added new parameter definitions and modulation destinations (`osc_1_pan`, `osc_2_pan`, `osc_1_unison_spread`, `osc_2_unison_spread`) in `helm_common.cpp`, `params.json`, and `helm_adapter.cpp`.
+- **Minimal Stereo Signal Path Step**:
+  - `HelmOscillators`: Configured dual outputs (`Processor(kNumInputs, 2)`). Split unison accumulators into dual left/right totals (`oscillator1_left_totals_`, `oscillator1_right_totals_`, `oscillator2_left_totals_`, `oscillator2_right_totals_`), routed to `output(0)` (Left) and `output(1)` (Right) using the unison spread and pan gains.
+  - `HelmVoiceHandler`: Registered `output_left_` and `output_right_` in constructor so output indices 0 and 1 represent accumulated Left and Right audio. Routed sub-oscillator and noise into dual stereo adders, dual feedback delays (`osc_feedback_left_`, `osc_feedback_right_`), and dual `StateVariableFilter` instances (`filter_left_`, `filter_right_`) directly into `output_left_` and `output_right_`.
+
+- **Stereo Master FX Implementation**:
+  - `Distortion`: Dual instances (`distortion_left`, `distortion_right`) processing Left and Right voice audio independently with shared controls (`distortion_on`, `distortion_type`, `distortion_drive`, `distortion_mix`).
+  - `Delay`: Dual instances (`delay_left`, `delay_right`) wrapped in separate standard `BypassRouter` containers (`delay_container_left`, `delay_container_right`), preserving full stereo panning while maintaining tempo sync and feedback settings.
+  - `DcFilter`: Dual DC blocker filters (`dc_filter_left`, `dc_filter_right`).
+  - `Reverb`: Updated `Reverb` to take `kAudioLeft` and `kAudioRight`. Comb/all-pass network receives a sum `(left + right) * 0.5` for decorrelated diffusion, while dry audio maintains full Left/Right stereo separation. Wrapped in dual `BypassRouter` containers (`reverb_container_left`, `reverb_container_right`) to cleanly bypass when inactive without summing to mono.
+  - Volume scaling (`scaled_audio_left`, `scaled_audio_right`) and clipping (`clamp_left`, `clamp_right`) preserve stereo separation all the way to audio output.
+
+
 - **Touch UI Layout Redesign (`layout.conf` [tab OSC])**:
   - Moved **Cross Mod** frame & knob (`cross_modulation`) to the bottom-right corner next to Sub and Noise.
   - Expanded **OSC 1** and **OSC 2** frames to full width (920px).

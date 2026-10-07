@@ -24,18 +24,12 @@ namespace mopo {
   void BypassRouter::process() {
     MOPO_ASSERT(inputMatchesBufferSize(kAudio));
 
-    mopo_float should_process = input(numInputs() - 1)->at(0);
-    if (should_process) {
+    mopo_float should_process = input(kOn)->at(0);
+    if (should_process)
       ProcessorRouter::process();
-    } else {
-      if (numOutputs() == 1) {
-        utils::copyBuffer(output(0)->buffer, input(kAudio)->source->buffer, buffer_size_);
-      } else {
-        for (int i = 0; i < numOutputs(); ++i) {
-          int in_idx = (i < numInputs() - 1 && input(i)->source) ? i : 0;
-          utils::copyBuffer(output(i)->buffer, input(in_idx)->source->buffer, buffer_size_);
-        }
-      }
+    else  {
+      for (int i = 0; i < numOutputs(); ++i)
+        utils::copyBuffer(output(i)->buffer, input(kAudio)->source->buffer, buffer_size_);
     }
   }
 } // namespace mopo

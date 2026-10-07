@@ -221,26 +221,30 @@ namespace mopo {
     delay_right->plug(delay_feedback_clamped, Delay::kFeedback);
     delay_right->plug(delay_wet, Delay::kWet);
 
-    BypassRouter* delay_container = new BypassRouter(3, 0);
-    delay_container->plug(distortion_left, 0);
-    delay_container->plug(distortion_right, 1);
-    delay_container->plug(delay_on, 2);
-    delay_container->addProcessor(delay_feedback_clamped);
-    delay_container->addProcessor(delay_frequency_smoothed);
-    delay_container->addProcessor(delay_samples);
-    delay_container->addProcessor(delay_left);
-    delay_container->addProcessor(delay_right);
-    delay_container->registerOutput(delay_left->output());
-    delay_container->registerOutput(delay_right->output());
+    BypassRouter* delay_container_left = new BypassRouter();
+    delay_container_left->plug(delay_on, BypassRouter::kOn);
+    delay_container_left->plug(distortion_left, BypassRouter::kAudio);
+    delay_container_left->addProcessor(delay_left);
+    delay_container_left->registerOutput(delay_left->output());
 
-    addProcessor(delay_container);
+    BypassRouter* delay_container_right = new BypassRouter();
+    delay_container_right->plug(delay_on, BypassRouter::kOn);
+    delay_container_right->plug(distortion_right, BypassRouter::kAudio);
+    delay_container_right->addProcessor(delay_right);
+    delay_container_right->registerOutput(delay_right->output());
+
+    addProcessor(delay_feedback_clamped);
+    addProcessor(delay_frequency_smoothed);
+    addProcessor(delay_samples);
+    addProcessor(delay_container_left);
+    addProcessor(delay_container_right);
 
     // DC Blocker.
     DcFilter* dc_filter_left = new DcFilter();
-    dc_filter_left->plug(delay_container->output(0), DcFilter::kAudio);
+    dc_filter_left->plug(delay_container_left, DcFilter::kAudio);
 
     DcFilter* dc_filter_right = new DcFilter();
-    dc_filter_right->plug(delay_container->output(1), DcFilter::kAudio);
+    dc_filter_right->plug(delay_container_right, DcFilter::kAudio);
 
     addProcessor(dc_filter_left);
     addProcessor(dc_filter_right);
@@ -255,22 +259,26 @@ namespace mopo {
     reverb_feedback_clamped->plug(reverb_feedback);
 
     Reverb* reverb = new Reverb();
-    reverb->plug(dc_filter_left, Reverb::kAudio);
+    reverb->plug(dc_filter_left, Reverb::kAudioLeft);
     reverb->plug(dc_filter_right, Reverb::kAudioRight);
     reverb->plug(reverb_feedback_clamped, Reverb::kFeedback);
     reverb->plug(reverb_damping, Reverb::kDamping);
     reverb->plug(reverb_wet, Reverb::kWet);
 
-    BypassRouter* reverb_container = new BypassRouter(3, 0);
-    reverb_container->plug(dc_filter_left, 0);
-    reverb_container->plug(dc_filter_right, 1);
-    reverb_container->plug(reverb_on, 2);
-    reverb_container->addProcessor(reverb);
-    reverb_container->addProcessor(reverb_feedback_clamped);
-    reverb_container->registerOutput(reverb->output(0));
-    reverb_container->registerOutput(reverb->output(1));
+    BypassRouter* reverb_container_left = new BypassRouter();
+    reverb_container_left->plug(reverb_on, BypassRouter::kOn);
+    reverb_container_left->plug(dc_filter_left, BypassRouter::kAudio);
+    reverb_container_left->addProcessor(reverb);
+    reverb_container_left->addProcessor(reverb_feedback_clamped);
+    reverb_container_left->registerOutput(reverb->output(0));
 
-    addProcessor(reverb_container);
+    BypassRouter* reverb_container_right = new BypassRouter();
+    reverb_container_right->plug(reverb_on, BypassRouter::kOn);
+    reverb_container_right->plug(dc_filter_right, BypassRouter::kAudio);
+    reverb_container_right->registerOutput(reverb->output(1));
+
+    addProcessor(reverb_container_left);
+    addProcessor(reverb_container_right);
 
     // Volume.
     Output* volume = createMonoModControl("volume", true);
@@ -278,11 +286,11 @@ namespace mopo {
     smooth_volume->plug(volume);
 
     Multiply* scaled_audio_left = new Multiply();
-    scaled_audio_left->plug(reverb_container->output(0), 0);
+    scaled_audio_left->plug(reverb_container_left->output(0), 0);
     scaled_audio_left->plug(smooth_volume, 1);
 
     Multiply* scaled_audio_right = new Multiply();
-    scaled_audio_right->plug(reverb_container->output(1), 0);
+    scaled_audio_right->plug(reverb_container_right->output(0), 0);
     scaled_audio_right->plug(smooth_volume, 1);
 
     peak_meter_ = new PeakMeter();

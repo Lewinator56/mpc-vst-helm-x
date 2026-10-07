@@ -15,7 +15,6 @@
  */
 
 #include "voice_handler.h"
-#include <cstdio>
 
 #include "utils.h"
 

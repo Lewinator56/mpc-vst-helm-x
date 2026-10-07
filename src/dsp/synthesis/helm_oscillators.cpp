@@ -46,19 +46,15 @@ namespace mopo {
       wave_buffers2_[v] = nullptr;
       detune_diffs1_[v] = 0;
       detune_diffs2_[v] = 0;
-      gains_left1_[v] = 0.70710678f;
-      gains_right1_[v] = 0.70710678f;
-      gains_left2_[v] = 0.70710678f;
-      gains_right2_[v] = 0.70710678f;
+      gains_left1_[v] = 1.0f;
+      gains_right1_[v] = 1.0f;
+      gains_left2_[v] = 1.0f;
+      gains_right2_[v] = 1.0f;
     }
 
     for (int i = 0; i < MAX_BUFFER_SIZE; ++i) {
       oscillator1_phase_diffs_[i] = 0;
       oscillator2_phase_diffs_[i] = 0;
-      oscillator1_left_totals_[i] = 0.0f;
-      oscillator1_right_totals_[i] = 0.0f;
-      oscillator2_left_totals_[i] = 0.0f;
-      oscillator2_right_totals_[i] = 0.0f;
     }
   }
 

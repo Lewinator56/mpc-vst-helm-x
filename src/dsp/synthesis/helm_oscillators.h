@@ -55,8 +55,8 @@ namespace mopo {
       virtual void process();
       virtual Processor* clone() const { return new HelmOscillators(*this); }
 
-      Output* getOscillator1LeftOutput() { return output(0); }
-      Output* getOscillator1RightOutput() { return output(1); }
+      Output* getOscillator1Output() { return output(0); }
+      Output* getOscillator2Output() { return output(1); }
 
     protected:
       void reset(int i);

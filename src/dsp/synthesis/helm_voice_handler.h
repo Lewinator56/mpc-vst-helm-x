@@ -96,6 +96,9 @@ namespace mopo {
 
       Value* legato_;
       Distortion* distorted_filter_;
+      StateVariableFilter* filter_left_;
+      StateVariableFilter* filter_right_;
+      FormantManager* formant_filter_;
       Envelope* filter_envelope_;
       BypassRouter* formant_container_;
       Output note_retriggered_;
