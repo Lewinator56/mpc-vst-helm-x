@@ -10,7 +10,7 @@ Author / Vendor: **Lewinator56**
   - `HelmOscillators`: Configured dual outputs (`Processor(kNumInputs, 2)`). Split unison accumulators into dual left/right totals (`oscillator1_left_totals_`, `oscillator1_right_totals_`, `oscillator2_left_totals_`, `oscillator2_right_totals_`), routed to `output(0)` (Left) and `output(1)` (Right) using the unison spread and pan gains.
   - `HelmVoiceHandler`: Registered `output_left_` and `output_right_` in constructor so output indices 0 and 1 represent accumulated Left and Right audio. Routed sub-oscillator and noise into dual stereo adders, dual feedback delays (`osc_feedback_left_`, `osc_feedback_right_`), and dual `StateVariableFilter` instances (`filter_left_`, `filter_right_`) directly into `output_left_` and `output_right_`.
 
-- **Stereo Master FX Implementation**:
+- **Stereo Master FX Implementation (Commit `84f9123`)**:
   - `Distortion`: Dual instances (`distortion_left`, `distortion_right`) processing Left and Right voice audio independently with shared controls (`distortion_on`, `distortion_type`, `distortion_drive`, `distortion_mix`).
   - `Delay`: Dual instances (`delay_left`, `delay_right`) wrapped in separate standard `BypassRouter` containers (`delay_container_left`, `delay_container_right`), preserving full stereo panning while maintaining tempo sync and feedback settings.
   - `DcFilter`: Dual DC blocker filters (`dc_filter_left`, `dc_filter_right`).
