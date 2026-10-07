@@ -40,6 +40,12 @@ namespace mopo {
   class StepGenerator;
   class TriggerCombiner;
   class HelmOscillators;
+  class FixedPointOscillator;
+  class NoiseOscillator;
+  class StateVariableFilter;
+  class Filter1InputRouter;
+  class Filter2InputRouter;
+  class FilterOutputMixer;
 
   // The voice handler duplicates processors to produce polyphony.
   // Everything in the synthesizer we want per-voice instances of must be
@@ -75,7 +81,7 @@ namespace mopo {
       void createModulators(Output* reset);
 
       // Create the filter and filter envelope.
-      void createFilter(Output* audio_left, Output* audio_right, Output* keytrack, Output* reset);
+      void createFilters(Output* keytrack, Output* reset);
 
       void setupPolyModulationReadouts();
 
@@ -91,13 +97,22 @@ namespace mopo {
       SimpleDelay* osc_feedback_left_;
       SimpleDelay* osc_feedback_right_;
 
+      HelmOscillators* oscillators_;
+      FixedPointOscillator* sub_oscillator_;
+      NoiseOscillator* noise_oscillator_;
+
       TriggerCombiner* env_trigger_;
       Envelope* extra_envelope_;
 
       Value* legato_;
       Distortion* distorted_filter_;
-      StateVariableFilter* filter_left_;
-      StateVariableFilter* filter_right_;
+      StateVariableFilter* filter_1_left_;
+      StateVariableFilter* filter_1_right_;
+      StateVariableFilter* filter_2_left_;
+      StateVariableFilter* filter_2_right_;
+      Filter1InputRouter* filter_1_router_;
+      Filter2InputRouter* filter_2_router_;
+      FilterOutputMixer* filter_output_mixer_;
       FormantManager* formant_filter_;
       Envelope* filter_envelope_;
       BypassRouter* formant_container_;

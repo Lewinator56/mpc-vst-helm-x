@@ -21,6 +21,7 @@
 #include "ladder_filter.h"
 #include "noise_oscillator.h"
 #include "resonance_cancel.h"
+#include "helm_filter_router.h"
 #include "helm_lfo.h"
 #include "helm_oscillators.h"
 #include "trigger_random.h"
@@ -131,9 +132,8 @@ namespace mopo {
     createOscillators(current_frequency_->output(),
                       amplitude_envelope_->output(Envelope::kFinished));
     createModulators(amplitude_envelope_->output(Envelope::kFinished));
-    createFilter(osc_feedback_left_->output(0), osc_feedback_right_->output(0),
-                 note_from_center_->output(),
-                 amplitude_envelope_->output(Envelope::kFinished));
+    createFilters(note_from_center_->output(),
+                  amplitude_envelope_->output(Envelope::kFinished));
 
     Value* aftertouch_value = new cr::Value();
     aftertouch_value->plug(aftertouch());
@@ -141,10 +141,10 @@ namespace mopo {
     addProcessor(aftertouch_value);
     mod_sources_["aftertouch"] = aftertouch_value->output();
 
-    output_left_->plug(filter_left_, 0);
+    output_left_->plug(filter_output_mixer_->output(0), 0);
     output_left_->plug(amplitude_, 1);
 
-    output_right_->plug(filter_right_, 0);
+    output_right_->plug(filter_output_mixer_->output(1), 0);
     output_right_->plug(amplitude_, 1);
 
     addProcessor(output_left_);
@@ -170,7 +170,7 @@ namespace mopo {
     addProcessor(bent_midi);
 
     // Oscillator 1.
-    HelmOscillators* oscillators = new HelmOscillators();
+    oscillators_ = new HelmOscillators();
     Output* oscillator1_waveform = createPolyModControl("osc_1_waveform", true);
     Output* oscillator1_transpose = createPolyModControl("osc_1_transpose", true);
     Output* oscillator1_tune = createPolyModControl("osc_1_tune", true);
@@ -196,24 +196,24 @@ namespace mopo {
     oscillator1_phase_inc_smooth->plug(oscillator1_phase_inc, LinearSmoothBuffer::kValue);
     oscillator1_phase_inc_smooth->plug(reset, LinearSmoothBuffer::kTrigger);
 
-    oscillators->plug(oscillator1_waveform, HelmOscillators::kOscillator1Waveform);
-    oscillators->plug(reset, HelmOscillators::kReset);
-    oscillators->plug(oscillator1_phase_inc_smooth, HelmOscillators::kOscillator1PhaseInc);
-    oscillators->plug(oscillator1_unison_detune, HelmOscillators::kUnisonDetune1);
-    oscillators->plug(oscillator1_unison_voices, HelmOscillators::kUnisonVoices1);
-    oscillators->plug(oscillator1_unison_harmonize, HelmOscillators::kHarmonize1);
-    oscillators->plug(oscillator1_pan, HelmOscillators::kOscillator1Pan);
-    oscillators->plug(oscillator1_unison_spread, HelmOscillators::kUnisonSpread1);
+    oscillators_->plug(oscillator1_waveform, HelmOscillators::kOscillator1Waveform);
+    oscillators_->plug(reset, HelmOscillators::kReset);
+    oscillators_->plug(oscillator1_phase_inc_smooth, HelmOscillators::kOscillator1PhaseInc);
+    oscillators_->plug(oscillator1_unison_detune, HelmOscillators::kUnisonDetune1);
+    oscillators_->plug(oscillator1_unison_voices, HelmOscillators::kUnisonVoices1);
+    oscillators_->plug(oscillator1_unison_harmonize, HelmOscillators::kHarmonize1);
+    oscillators_->plug(oscillator1_pan, HelmOscillators::kOscillator1Pan);
+    oscillators_->plug(oscillator1_unison_spread, HelmOscillators::kUnisonSpread1);
 
     Output* cross_mod = createPolyModControl("cross_modulation", true);
-    oscillators->plug(cross_mod, HelmOscillators::kCrossMod);
+    oscillators_->plug(cross_mod, HelmOscillators::kCrossMod);
 
     addProcessor(oscillator1_transposed);
     addProcessor(oscillator1_midi);
     addProcessor(oscillator1_frequency);
     addProcessor(oscillator1_phase_inc);
     addProcessor(oscillator1_phase_inc_smooth);
-    addProcessor(oscillators);
+    addProcessor(oscillators_);
 
     // Oscillator 2.
     Output* oscillator2_waveform = createPolyModControl("osc_2_waveform", true);
@@ -241,13 +241,13 @@ namespace mopo {
     oscillator2_phase_inc_smooth->plug(oscillator2_phase_inc, LinearSmoothBuffer::kValue);
     oscillator2_phase_inc_smooth->plug(reset, LinearSmoothBuffer::kTrigger);
 
-    oscillators->plug(oscillator2_waveform, HelmOscillators::kOscillator2Waveform);
-    oscillators->plug(oscillator2_phase_inc_smooth, HelmOscillators::kOscillator2PhaseInc);
-    oscillators->plug(oscillator2_unison_detune, HelmOscillators::kUnisonDetune2);
-    oscillators->plug(oscillator2_unison_voices, HelmOscillators::kUnisonVoices2);
-    oscillators->plug(oscillator2_unison_harmonize, HelmOscillators::kHarmonize2);
-    oscillators->plug(oscillator2_pan, HelmOscillators::kOscillator2Pan);
-    oscillators->plug(oscillator2_unison_spread, HelmOscillators::kUnisonSpread2);
+    oscillators_->plug(oscillator2_waveform, HelmOscillators::kOscillator2Waveform);
+    oscillators_->plug(oscillator2_phase_inc_smooth, HelmOscillators::kOscillator2PhaseInc);
+    oscillators_->plug(oscillator2_unison_detune, HelmOscillators::kUnisonDetune2);
+    oscillators_->plug(oscillator2_unison_voices, HelmOscillators::kUnisonVoices2);
+    oscillators_->plug(oscillator2_unison_harmonize, HelmOscillators::kHarmonize2);
+    oscillators_->plug(oscillator2_pan, HelmOscillators::kOscillator2Pan);
+    oscillators_->plug(oscillator2_unison_spread, HelmOscillators::kUnisonSpread2);
 
     addProcessor(oscillator2_transposed);
     addProcessor(oscillator2_midi);
@@ -260,13 +260,13 @@ namespace mopo {
     LinearSmoothBuffer* smooth_osc_1_amp = new LinearSmoothBuffer();
     smooth_osc_1_amp->plug(osc_1_amplitude, LinearSmoothBuffer::kValue);
     smooth_osc_1_amp->plug(reset, LinearSmoothBuffer::kTrigger);
-    oscillators->plug(smooth_osc_1_amp, HelmOscillators::kOscillator1Amplitude);
+    oscillators_->plug(smooth_osc_1_amp, HelmOscillators::kOscillator1Amplitude);
 
     Output* osc_2_amplitude = createPolyModControl("osc_2_volume", true);
     LinearSmoothBuffer* smooth_osc_2_amp = new LinearSmoothBuffer();
     smooth_osc_2_amp->plug(osc_2_amplitude, LinearSmoothBuffer::kValue);
     smooth_osc_2_amp->plug(reset, LinearSmoothBuffer::kTrigger);
-    oscillators->plug(smooth_osc_2_amp, HelmOscillators::kOscillator2Amplitude);
+    oscillators_->plug(smooth_osc_2_amp, HelmOscillators::kOscillator2Amplitude);
 
     addProcessor(smooth_osc_1_amp);
     addProcessor(smooth_osc_2_amp);
@@ -291,46 +291,46 @@ namespace mopo {
     smooth_sub_volume->plug(sub_volume, LinearSmoothBuffer::kValue);
     smooth_sub_volume->plug(reset, LinearSmoothBuffer::kTrigger);
 
-    FixedPointOscillator* sub_oscillator = new FixedPointOscillator();
-    sub_oscillator->plug(sub_phase_inc, FixedPointOscillator::kPhaseInc);
-    sub_oscillator->plug(sub_shuffle, FixedPointOscillator::kShuffle);
-    sub_oscillator->plug(sub_waveform, FixedPointOscillator::kWaveform);
-    sub_oscillator->plug(reset, FixedPointOscillator::kReset);
-    sub_oscillator->plug(sub_octave, FixedPointOscillator::kLowOctave);
-    sub_oscillator->plug(smooth_sub_volume, FixedPointOscillator::kAmplitude);
+    sub_oscillator_ = new FixedPointOscillator();
+    sub_oscillator_->plug(sub_phase_inc, FixedPointOscillator::kPhaseInc);
+    sub_oscillator_->plug(sub_shuffle, FixedPointOscillator::kShuffle);
+    sub_oscillator_->plug(sub_waveform, FixedPointOscillator::kWaveform);
+    sub_oscillator_->plug(reset, FixedPointOscillator::kReset);
+    sub_oscillator_->plug(sub_octave, FixedPointOscillator::kLowOctave);
+    sub_oscillator_->plug(smooth_sub_volume, FixedPointOscillator::kAmplitude);
 
     addProcessor(sub_midi);
     addProcessor(sub_frequency);
     addProcessor(sub_phase_inc);
-    addProcessor(sub_oscillator);
+    addProcessor(sub_oscillator_);
     addProcessor(smooth_sub_volume);
 
     Add* oscillator_sum_left = new Add();
-    oscillator_sum_left->plug(oscillators->output(0), 0);
-    oscillator_sum_left->plug(sub_oscillator, 1);
+    oscillator_sum_left->plug(oscillators_->output(0), 0);
+    oscillator_sum_left->plug(sub_oscillator_, 1);
 
     Add* oscillator_sum_right = new Add();
-    oscillator_sum_right->plug(oscillators->output(1), 0);
-    oscillator_sum_right->plug(sub_oscillator, 1);
+    oscillator_sum_right->plug(oscillators_->output(1), 0);
+    oscillator_sum_right->plug(sub_oscillator_, 1);
 
     addProcessor(oscillator_sum_left);
     addProcessor(oscillator_sum_right);
 
     // Noise Oscillator.
     Output* noise_volume = createPolyModControl("noise_volume", true);
-    NoiseOscillator* noise_oscillator = new NoiseOscillator();
-    noise_oscillator->plug(reset, NoiseOscillator::kReset);
-    noise_oscillator->plug(noise_volume, NoiseOscillator::kAmplitude);
+    noise_oscillator_ = new NoiseOscillator();
+    noise_oscillator_->plug(reset, NoiseOscillator::kReset);
+    noise_oscillator_->plug(noise_volume, NoiseOscillator::kAmplitude);
 
-    addProcessor(noise_oscillator);
+    addProcessor(noise_oscillator_);
 
     Add* oscillator_noise_sum_left = new Add();
     oscillator_noise_sum_left->plug(oscillator_sum_left, 0);
-    oscillator_noise_sum_left->plug(noise_oscillator, 1);
+    oscillator_noise_sum_left->plug(noise_oscillator_, 1);
 
     Add* oscillator_noise_sum_right = new Add();
     oscillator_noise_sum_right->plug(oscillator_sum_right, 0);
-    oscillator_noise_sum_right->plug(noise_oscillator, 1);
+    oscillator_noise_sum_right->plug(noise_oscillator_, 1);
 
     addProcessor(oscillator_noise_sum_left);
     addProcessor(oscillator_noise_sum_right);
@@ -435,8 +435,7 @@ namespace mopo {
     mod_sources_["random"] = random_mod->output();
   }
 
-  void HelmVoiceHandler::createFilter(
-      Output* audio_left, Output* audio_right, Output* keytrack, Output* reset) {
+  void HelmVoiceHandler::createFilters(Output* keytrack, Output* reset) {
     // Filter envelope.
     Output* filter_attack = createPolyModControl("fil_attack", true);
     Output* filter_decay = createPolyModControl("fil_decay", true);
@@ -450,217 +449,214 @@ namespace mopo {
     filter_envelope_->plug(filter_release, Envelope::kRelease);
     filter_envelope_->plug(env_trigger_, Envelope::kTrigger);
 
-    Output* filter_envelope_depth = createPolyModControl("fil_env_depth", true);
-    cr::Multiply* scaled_envelope = new cr::Multiply();
-    scaled_envelope->plug(filter_envelope_, 0);
-    scaled_envelope->plug(filter_envelope_depth, 1);
-
     addProcessor(filter_envelope_);
-    addProcessor(scaled_envelope);
-
-    // Filter.
-    Output* keytrack_amount = createPolyModControl("keytrack", true);
-    cr::Multiply* current_keytrack = new cr::Multiply();
-    current_keytrack->plug(keytrack, 0);
-    current_keytrack->plug(keytrack_amount, 1);
-
-    Output* base_cutoff = createPolyModControl("cutoff", true, true);
-    cr::Add* keytracked_cutoff = new cr::Add();
-    keytracked_cutoff->plug(base_cutoff, 0);
-    keytracked_cutoff->plug(current_keytrack, 1);
-
-    cr::Add* midi_cutoff = new cr::Add();
-    midi_cutoff->plug(keytracked_cutoff, 0);
-    midi_cutoff->plug(scaled_envelope, 1);
-
-    cr::MidiScale* frequency_cutoff = new cr::MidiScale();
-    frequency_cutoff->plug(midi_cutoff);
-
-    Output* resonance = createPolyModControl("resonance", true);
-    cr::ResonanceScale* scaled_resonance = new cr::ResonanceScale();
-    scaled_resonance->plug(resonance);
-
-    static const cr::Value min_db(MIN_GAIN_DB);
-    static const cr::Value max_db(MAX_GAIN_DB);
-    cr::Interpolate* decibels = new cr::Interpolate();
-    decibels->plug(&min_db, cr::Interpolate::kFrom);
-    decibels->plug(&max_db, cr::Interpolate::kTo);
-    decibels->plug(resonance, cr::Interpolate::kFractional);
-    cr::MagnitudeScale* final_gain = new cr::MagnitudeScale();
-    final_gain->plug(decibels);
-
-    Value* filter_style = createBaseControl("filter_style");
-    Value* filter_shelf = createBaseControl("filter_shelf");
-    Value* filter_on = createBaseControl("filter_on");
-    Output* filter_drive = createPolyModControl("filter_drive", true);
-    Output* filter_blend = createPolyModControl("filter_blend", true);
-    cr::MagnitudeScale* drive_magnitude = new cr::MagnitudeScale();
-    drive_magnitude->plug(filter_drive);
-
-    filter_left_ = new StateVariableFilter();
-    filter_left_->plug(filter_on, StateVariableFilter::kOn);
-    filter_left_->plug(filter_style, StateVariableFilter::kStyle);
-    filter_left_->plug(filter_shelf, StateVariableFilter::kShelfChoice);
-    filter_left_->plug(audio_left, StateVariableFilter::kAudio);
-    filter_left_->plug(filter_blend, StateVariableFilter::kPassBlend);
-    filter_left_->plug(reset, StateVariableFilter::kReset);
-    filter_left_->plug(frequency_cutoff, StateVariableFilter::kCutoff);
-    filter_left_->plug(scaled_resonance, StateVariableFilter::kResonance);
-    filter_left_->plug(final_gain, StateVariableFilter::kGain);
-    filter_left_->plug(drive_magnitude, StateVariableFilter::kDrive);
-
-    filter_right_ = new StateVariableFilter();
-    filter_right_->plug(filter_on, StateVariableFilter::kOn);
-    filter_right_->plug(filter_style, StateVariableFilter::kStyle);
-    filter_right_->plug(filter_shelf, StateVariableFilter::kShelfChoice);
-    filter_right_->plug(audio_right, StateVariableFilter::kAudio);
-    filter_right_->plug(filter_blend, StateVariableFilter::kPassBlend);
-    filter_right_->plug(reset, StateVariableFilter::kReset);
-    filter_right_->plug(frequency_cutoff, StateVariableFilter::kCutoff);
-    filter_right_->plug(scaled_resonance, StateVariableFilter::kResonance);
-    filter_right_->plug(final_gain, StateVariableFilter::kGain);
-    filter_right_->plug(drive_magnitude, StateVariableFilter::kDrive);
-
-    addProcessor(current_keytrack);
-    addProcessor(keytracked_cutoff);
-    addProcessor(midi_cutoff);
-    addProcessor(scaled_resonance);
-    addProcessor(decibels);
-    addProcessor(final_gain);
-    addProcessor(frequency_cutoff);
-    addProcessor(filter_left_);
-    addProcessor(filter_right_);
-
-    addProcessor(drive_magnitude);
 
     mod_sources_["fil_envelope"] = filter_envelope_->output();
     mod_sources_["fil_envelope_amp"] = registerOutput(filter_envelope_->output(Envelope::kValue));
     mod_sources_["fil_envelope_phase"] = registerOutput(filter_envelope_->output(Envelope::kPhase));
 
-    // Stutter.
-    BypassRouter* stutter_container = new BypassRouter();
-    addProcessor(stutter_container);
+    // Routing controls.
+    Value* filter_routing = createBaseControl("filter_routing");
+    Value* sub_filter_target = createBaseControl("sub_filter_target");
+    Value* noise_filter_target = createBaseControl("noise_filter_target");
+    Output* filter_1_pan = createPolyModControl("filter_1_pan", true);
+    Output* filter_2_pan = createPolyModControl("filter_2_pan", true);
 
-    ValueSwitch* stutter_on = createBaseSwitchControl("stutter_on");
-    stutter_container->plug(stutter_on, BypassRouter::kOn);
-    stutter_container->plug(filter_left_, BypassRouter::kAudio);
+    // Filter 1.
+    Output* filter_1_envelope_depth = createPolyModControl("fil_env_depth", true);
+    cr::Multiply* scaled_envelope_1 = new cr::Multiply();
+    scaled_envelope_1->plug(filter_envelope_, 0);
+    scaled_envelope_1->plug(filter_1_envelope_depth, 1);
 
-    Stutter* stutter = new Stutter(STUTTER_MAX_SAMPLES);
-    Output* stutter_free_frequency = createPolyModControl("stutter_frequency", true);
-    Output* stutter_frequency = createTempoSyncSwitch("stutter", stutter_free_frequency->owner,
-                                                      beats_per_second_, true, stutter_on);
-    Output* resample_free_frequency = createPolyModControl("stutter_resample_frequency", true);
-    Output* resample_frequency = createTempoSyncSwitch("stutter_resample",
-                                                       resample_free_frequency->owner,
-                                                       beats_per_second_, true, stutter_on);
+    Output* keytrack_1_amount = createPolyModControl("keytrack", true);
+    cr::Multiply* current_keytrack_1 = new cr::Multiply();
+    current_keytrack_1->plug(keytrack, 0);
+    current_keytrack_1->plug(keytrack_1_amount, 1);
 
-    Output* stutter_softness = createPolyModControl("stutter_softness", true);
+    Output* base_cutoff_1 = createPolyModControl("cutoff", true, true);
+    cr::Add* keytracked_cutoff_1 = new cr::Add();
+    keytracked_cutoff_1->plug(base_cutoff_1, 0);
+    keytracked_cutoff_1->plug(current_keytrack_1, 1);
 
-    stutter_container->addProcessor(stutter);
-    stutter_container->registerOutput(stutter->output());
+    cr::Add* midi_cutoff_1 = new cr::Add();
+    midi_cutoff_1->plug(keytracked_cutoff_1, 0);
+    midi_cutoff_1->plug(scaled_envelope_1, 1);
 
-    stutter->plug(filter_left_, Stutter::kAudio);
-    stutter->plug(stutter_frequency, Stutter::kStutterFrequency);
-    stutter->plug(resample_frequency, Stutter::kResampleFrequency);
-    stutter->plug(stutter_softness, Stutter::kWindowSoftness);
-    stutter->plug(reset, Stutter::kReset);
+    cr::CutoffScale* frequency_cutoff_1 = new cr::CutoffScale();
+    frequency_cutoff_1->plug(midi_cutoff_1);
 
-    // Formant Filter.
-    formant_container_ = new BypassRouter();
-    addProcessor(formant_container_);
+    Output* resonance_1 = createPolyModControl("resonance", true);
+    cr::ResonanceScale* scaled_resonance_1 = new cr::ResonanceScale();
+    scaled_resonance_1->plug(resonance_1);
 
-    ValueSwitch* formant_on = createBaseSwitchControl("formant_on");
-    formant_container_->plug(formant_on->output(ValueSwitch::kValue), BypassRouter::kOn);
-    formant_container_->plug(stutter_container, BypassRouter::kAudio);
+    static const cr::Value min_db(MIN_GAIN_DB);
+    static const cr::Value max_db(MAX_GAIN_DB);
+    cr::Interpolate* decibels_1 = new cr::Interpolate();
+    decibels_1->plug(&min_db, cr::Interpolate::kFrom);
+    decibels_1->plug(&max_db, cr::Interpolate::kTo);
+    decibels_1->plug(resonance_1, cr::Interpolate::kFractional);
+    cr::MagnitudeScale* final_gain_1 = new cr::MagnitudeScale();
+    final_gain_1->plug(decibels_1);
 
-    formant_filter_ = new FormantManager(NUM_FORMANTS);
-    formant_filter_->plug(stutter_container, FormantManager::kAudio);
-    formant_filter_->plug(reset, FormantManager::kReset);
+    Value* filter_1_style = createBaseControl("filter_style");
+    Value* filter_1_shelf = createBaseControl("filter_shelf");
+    Value* filter_1_on = createBaseControl("filter_on");
+    Output* filter_1_drive = createPolyModControl("filter_drive", true);
+    Output* filter_1_blend = createPolyModControl("filter_blend", true);
+    cr::MagnitudeScale* drive_magnitude_1 = new cr::MagnitudeScale();
+    drive_magnitude_1->plug(filter_1_drive);
 
-    Output* formant_x = createPolyModControl("formant_x", true);
-    Output* formant_y = createPolyModControl("formant_y", true);
+    filter_1_router_ = new Filter1InputRouter();
+    filter_1_router_->plug(oscillators_->output(0), Filter1InputRouter::kOsc1Left);
+    filter_1_router_->plug(oscillators_->output(1), Filter1InputRouter::kOsc1Right);
+    filter_1_router_->plug(oscillators_->output(2), Filter1InputRouter::kOsc2Left);
+    filter_1_router_->plug(oscillators_->output(3), Filter1InputRouter::kOsc2Right);
+    filter_1_router_->plug(sub_oscillator_, Filter1InputRouter::kSub);
+    filter_1_router_->plug(noise_oscillator_, Filter1InputRouter::kNoise);
+    filter_1_router_->plug(filter_routing, Filter1InputRouter::kRoutingMode);
+    filter_1_router_->plug(sub_filter_target, Filter1InputRouter::kSubTarget);
+    filter_1_router_->plug(noise_filter_target, Filter1InputRouter::kNoiseTarget);
 
-    for (int i = 0; i < NUM_FORMANTS; ++i) {
-      BilinearInterpolate* formant_gain = new BilinearInterpolate();
-      formant_gain->setControlRate();
-      BilinearInterpolate* formant_q = new BilinearInterpolate();
-      formant_q->setControlRate();
-      BilinearInterpolate* formant_midi = new BilinearInterpolate();
-      formant_midi->setControlRate();
+    filter_1_left_ = new StateVariableFilter();
+    filter_1_left_->plug(filter_1_on, StateVariableFilter::kOn);
+    filter_1_left_->plug(filter_1_style, StateVariableFilter::kStyle);
+    filter_1_left_->plug(filter_1_shelf, StateVariableFilter::kShelfChoice);
+    filter_1_left_->plug(filter_1_router_->output(0), StateVariableFilter::kAudio);
+    filter_1_left_->plug(filter_1_blend, StateVariableFilter::kPassBlend);
+    filter_1_left_->plug(reset, StateVariableFilter::kReset);
+    filter_1_left_->plug(frequency_cutoff_1, StateVariableFilter::kCutoff);
+    filter_1_left_->plug(scaled_resonance_1, StateVariableFilter::kResonance);
+    filter_1_left_->plug(final_gain_1, StateVariableFilter::kGain);
+    filter_1_left_->plug(drive_magnitude_1, StateVariableFilter::kDrive);
 
-      formant_gain->plug(&formant_a[i].gain, BilinearInterpolate::kTopLeft);
-      formant_gain->plug(&formant_o[i].gain, BilinearInterpolate::kTopRight);
-      formant_gain->plug(&formant_i[i].gain, BilinearInterpolate::kBottomLeft);
-      formant_gain->plug(&formant_e[i].gain, BilinearInterpolate::kBottomRight);
+    filter_1_right_ = new StateVariableFilter();
+    filter_1_right_->plug(filter_1_on, StateVariableFilter::kOn);
+    filter_1_right_->plug(filter_1_style, StateVariableFilter::kStyle);
+    filter_1_right_->plug(filter_1_shelf, StateVariableFilter::kShelfChoice);
+    filter_1_right_->plug(filter_1_router_->output(1), StateVariableFilter::kAudio);
+    filter_1_right_->plug(filter_1_blend, StateVariableFilter::kPassBlend);
+    filter_1_right_->plug(reset, StateVariableFilter::kReset);
+    filter_1_right_->plug(frequency_cutoff_1, StateVariableFilter::kCutoff);
+    filter_1_right_->plug(scaled_resonance_1, StateVariableFilter::kResonance);
+    filter_1_right_->plug(final_gain_1, StateVariableFilter::kGain);
+    filter_1_right_->plug(drive_magnitude_1, StateVariableFilter::kDrive);
 
-      formant_q->plug(&formant_a[i].resonance, BilinearInterpolate::kTopLeft);
-      formant_q->plug(&formant_o[i].resonance, BilinearInterpolate::kTopRight);
-      formant_q->plug(&formant_i[i].resonance, BilinearInterpolate::kBottomLeft);
-      formant_q->plug(&formant_e[i].resonance, BilinearInterpolate::kBottomRight);
+    addProcessor(scaled_envelope_1);
+    addProcessor(current_keytrack_1);
+    addProcessor(keytracked_cutoff_1);
+    addProcessor(midi_cutoff_1);
+    addProcessor(frequency_cutoff_1);
+    addProcessor(scaled_resonance_1);
+    addProcessor(decibels_1);
+    addProcessor(final_gain_1);
+    addProcessor(drive_magnitude_1);
+    addProcessor(filter_1_router_);
+    addProcessor(filter_1_left_);
+    addProcessor(filter_1_right_);
 
-      formant_midi->plug(&formant_a[i].midi_cutoff, BilinearInterpolate::kTopLeft);
-      formant_midi->plug(&formant_o[i].midi_cutoff, BilinearInterpolate::kTopRight);
-      formant_midi->plug(&formant_i[i].midi_cutoff, BilinearInterpolate::kBottomLeft);
-      formant_midi->plug(&formant_e[i].midi_cutoff, BilinearInterpolate::kBottomRight);
+    // Filter 2.
+    Output* filter_2_envelope_depth = createPolyModControl("filter_2_env_depth", true);
+    cr::Multiply* scaled_envelope_2 = new cr::Multiply();
+    scaled_envelope_2->plug(filter_envelope_, 0);
+    scaled_envelope_2->plug(filter_2_envelope_depth, 1);
 
-      formant_gain->plug(formant_x, BilinearInterpolate::kXPosition);
-      formant_q->plug(formant_x, BilinearInterpolate::kXPosition);
-      formant_midi->plug(formant_x, BilinearInterpolate::kXPosition);
+    Output* keytrack_2_amount = createPolyModControl("filter_2_keytrack", true);
+    cr::Multiply* current_keytrack_2 = new cr::Multiply();
+    current_keytrack_2->plug(keytrack, 0);
+    current_keytrack_2->plug(keytrack_2_amount, 1);
 
-      formant_gain->plug(formant_y, BilinearInterpolate::kYPosition);
-      formant_q->plug(formant_y, BilinearInterpolate::kYPosition);
-      formant_midi->plug(formant_y, BilinearInterpolate::kYPosition);
+    Output* base_cutoff_2 = createPolyModControl("filter_2_cutoff", true, true);
+    cr::Add* keytracked_cutoff_2 = new cr::Add();
+    keytracked_cutoff_2->plug(base_cutoff_2, 0);
+    keytracked_cutoff_2->plug(current_keytrack_2, 1);
 
-      cr::MagnitudeScale* formant_magnitude = new cr::MagnitudeScale();
-      formant_magnitude->plug(formant_gain);
+    cr::Add* midi_cutoff_2 = new cr::Add();
+    midi_cutoff_2->plug(keytracked_cutoff_2, 0);
+    midi_cutoff_2->plug(scaled_envelope_2, 1);
 
-      cr::MidiScale* formant_frequency = new cr::MidiScale();
-      formant_frequency->plug(formant_midi);
+    cr::CutoffScale* frequency_cutoff_2 = new cr::CutoffScale();
+    frequency_cutoff_2->plug(midi_cutoff_2);
 
-      formant_filter_->getFormant(i)->plug(&formant_filter_types[i], BiquadFilter::kType);
-      formant_filter_->getFormant(i)->plug(formant_magnitude, BiquadFilter::kGain);
-      formant_filter_->getFormant(i)->plug(formant_q, BiquadFilter::kResonance);
-      formant_filter_->getFormant(i)->plug(formant_frequency, BiquadFilter::kCutoff);
+    Output* resonance_2 = createPolyModControl("filter_2_resonance", true);
+    cr::ResonanceScale* scaled_resonance_2 = new cr::ResonanceScale();
+    scaled_resonance_2->plug(resonance_2);
 
-      addProcessor(formant_gain);
-      addProcessor(formant_magnitude);
-      addProcessor(formant_q);
-      addProcessor(formant_midi);
-      addProcessor(formant_frequency);
+    cr::Interpolate* decibels_2 = new cr::Interpolate();
+    decibels_2->plug(&min_db, cr::Interpolate::kFrom);
+    decibels_2->plug(&max_db, cr::Interpolate::kTo);
+    decibels_2->plug(resonance_2, cr::Interpolate::kFractional);
+    cr::MagnitudeScale* final_gain_2 = new cr::MagnitudeScale();
+    final_gain_2->plug(decibels_2);
 
-      formant_on->addProcessor(formant_gain);
-      formant_on->addProcessor(formant_magnitude);
-      formant_on->addProcessor(formant_q);
-      formant_on->addProcessor(formant_midi);
-      formant_on->addProcessor(formant_frequency);
-    }
+    Value* filter_2_style = createBaseControl("filter_2_style");
+    Value* filter_2_shelf = createBaseControl("filter_2_shelf");
+    Value* filter_2_on = createBaseControl("filter_2_on");
+    Output* filter_2_drive = createPolyModControl("filter_2_drive", true);
+    Output* filter_2_blend = createPolyModControl("filter_2_blend", true);
+    cr::MagnitudeScale* drive_magnitude_2 = new cr::MagnitudeScale();
+    drive_magnitude_2->plug(filter_2_drive);
 
-    BilinearInterpolate* formant_decibels = new BilinearInterpolate();
-    formant_decibels->setControlRate();
-    formant_decibels->plug(&formant_a_decibels, BilinearInterpolate::kTopLeft);
-    formant_decibels->plug(&formant_o_decibels, BilinearInterpolate::kTopRight);
-    formant_decibels->plug(&formant_i_decibels, BilinearInterpolate::kBottomLeft);
-    formant_decibels->plug(&formant_e_decibels, BilinearInterpolate::kBottomRight);
-    formant_decibels->plug(formant_x, BilinearInterpolate::kXPosition);
-    formant_decibels->plug(formant_y, BilinearInterpolate::kYPosition);
+    filter_2_router_ = new Filter2InputRouter();
+    filter_2_router_->plug(filter_1_left_, Filter2InputRouter::kFilter1OutLeft);
+    filter_2_router_->plug(filter_1_right_, Filter2InputRouter::kFilter1OutRight);
+    filter_2_router_->plug(filter_1_pan, Filter2InputRouter::kFilter1Pan);
+    filter_2_router_->plug(oscillators_->output(0), Filter2InputRouter::kOsc1Left);
+    filter_2_router_->plug(oscillators_->output(1), Filter2InputRouter::kOsc1Right);
+    filter_2_router_->plug(oscillators_->output(2), Filter2InputRouter::kOsc2Left);
+    filter_2_router_->plug(oscillators_->output(3), Filter2InputRouter::kOsc2Right);
+    filter_2_router_->plug(sub_oscillator_, Filter2InputRouter::kSub);
+    filter_2_router_->plug(noise_oscillator_, Filter2InputRouter::kNoise);
+    filter_2_router_->plug(filter_routing, Filter2InputRouter::kRoutingMode);
+    filter_2_router_->plug(sub_filter_target, Filter2InputRouter::kSubTarget);
+    filter_2_router_->plug(noise_filter_target, Filter2InputRouter::kNoiseTarget);
 
-    cr::MagnitudeScale* formant_total_gain = new cr::MagnitudeScale();
-    formant_total_gain->plug(formant_decibels);
+    filter_2_left_ = new StateVariableFilter();
+    filter_2_left_->plug(filter_2_on, StateVariableFilter::kOn);
+    filter_2_left_->plug(filter_2_style, StateVariableFilter::kStyle);
+    filter_2_left_->plug(filter_2_shelf, StateVariableFilter::kShelfChoice);
+    filter_2_left_->plug(filter_2_router_->output(0), StateVariableFilter::kAudio);
+    filter_2_left_->plug(filter_2_blend, StateVariableFilter::kPassBlend);
+    filter_2_left_->plug(reset, StateVariableFilter::kReset);
+    filter_2_left_->plug(frequency_cutoff_2, StateVariableFilter::kCutoff);
+    filter_2_left_->plug(scaled_resonance_2, StateVariableFilter::kResonance);
+    filter_2_left_->plug(final_gain_2, StateVariableFilter::kGain);
+    filter_2_left_->plug(drive_magnitude_2, StateVariableFilter::kDrive);
 
-    LinearSmoothBuffer* formant_gain_smooth = new LinearSmoothBuffer();
-    formant_gain_smooth->plug(formant_total_gain);
+    filter_2_right_ = new StateVariableFilter();
+    filter_2_right_->plug(filter_2_on, StateVariableFilter::kOn);
+    filter_2_right_->plug(filter_2_style, StateVariableFilter::kStyle);
+    filter_2_right_->plug(filter_2_shelf, StateVariableFilter::kShelfChoice);
+    filter_2_right_->plug(filter_2_router_->output(1), StateVariableFilter::kAudio);
+    filter_2_right_->plug(filter_2_blend, StateVariableFilter::kPassBlend);
+    filter_2_right_->plug(reset, StateVariableFilter::kReset);
+    filter_2_right_->plug(frequency_cutoff_2, StateVariableFilter::kCutoff);
+    filter_2_right_->plug(scaled_resonance_2, StateVariableFilter::kResonance);
+    filter_2_right_->plug(final_gain_2, StateVariableFilter::kGain);
+    filter_2_right_->plug(drive_magnitude_2, StateVariableFilter::kDrive);
 
-    Multiply* formant_output = new Multiply();
-    formant_output->plug(formant_gain_smooth, 0);
-    formant_output->plug(formant_filter_, 1);
+    addProcessor(scaled_envelope_2);
+    addProcessor(current_keytrack_2);
+    addProcessor(keytracked_cutoff_2);
+    addProcessor(midi_cutoff_2);
+    addProcessor(frequency_cutoff_2);
+    addProcessor(scaled_resonance_2);
+    addProcessor(decibels_2);
+    addProcessor(final_gain_2);
+    addProcessor(drive_magnitude_2);
+    addProcessor(filter_2_router_);
+    addProcessor(filter_2_left_);
+    addProcessor(filter_2_right_);
 
-    formant_container_->addProcessor(formant_decibels);
-    formant_container_->addProcessor(formant_total_gain);
-    formant_container_->addProcessor(formant_gain_smooth);
-    formant_container_->addProcessor(formant_filter_);
-    formant_container_->addProcessor(formant_output);
-    formant_container_->registerOutput(formant_output->output());
-    formant_on->set(formant_on->value());
+    // Output mixer.
+    filter_output_mixer_ = new FilterOutputMixer();
+    filter_output_mixer_->plug(filter_1_left_, FilterOutputMixer::kFilter1OutLeft);
+    filter_output_mixer_->plug(filter_1_right_, FilterOutputMixer::kFilter1OutRight);
+    filter_output_mixer_->plug(filter_1_pan, FilterOutputMixer::kFilter1Pan);
+    filter_output_mixer_->plug(filter_2_left_, FilterOutputMixer::kFilter2OutLeft);
+    filter_output_mixer_->plug(filter_2_right_, FilterOutputMixer::kFilter2OutRight);
+    filter_output_mixer_->plug(filter_2_pan, FilterOutputMixer::kFilter2Pan);
+    filter_output_mixer_->plug(filter_routing, FilterOutputMixer::kRoutingMode);
+    addProcessor(filter_output_mixer_);
   }
 
   void HelmVoiceHandler::createArticulation(

@@ -90,6 +90,7 @@ typedef struct {
     float shadow[NPARAMS];   /* unrounded position last set on an integer param; <0 = none */
     signed char last_on[NPARAMS];  /* last "<key>_on" value told to the host, +1 (0 = unknown) */
     volatile char need_update_display;  /* deferred audioMasterUpdateDisplay -- see setParameter() */
+    int last_routing_diag;
     float open[NPARAMS];     /* popup "open" flags (popup.h): kept here, never sent to the DSP or saved */
     char chunk[8192];
 } wrap_t;
@@ -234,6 +235,22 @@ static void housekeeping(AEffect *e, int32_t n) {
      * setParameter, so the host is not re-entered from its own call. */
     for (int i = 0; i < NPARAMS; i++)
         if (w->holdFrames[i] > 0 && (w->holdFrames[i] -= n) <= 0) { w->holdFrames[i] = 0; w->master(&w->fx, audioMasterAutomate, i, 0, 0, 0.0f); }
+    if (w->need_update_display || w->last_routing_diag < 0) {
+        char rdiag_buf[16];
+        if (g_api->get_param(w->dsp, "routing_diagram", rdiag_buf, sizeof rdiag_buf) > 0) {
+            int rdiag = atoi(rdiag_buf);
+            if (rdiag != w->last_routing_diag) {
+                w->last_routing_diag = rdiag;
+                for (int i = 0; i < NPARAMS; i++) {
+                    if (!strcmp(PARAMS[i].key, "routing_diagram")) {
+                        float norm = PARAMS[i].nopts > 1 ? (float)rdiag / (PARAMS[i].nopts - 1) : 0.0f;
+                        w->master(&w->fx, audioMasterAutomate, i, 0, 0, norm);
+                        break;
+                    }
+                }
+            }
+        }
+    }
     if (w->need_update_display) {
         w->need_update_display = 0;
         w->master(&w->fx, audioMasterUpdateDisplay, 0, 0, 0, 0.0f);
@@ -373,6 +390,7 @@ static intptr_t dispatcher(AEffect *e, int32_t op, int32_t idx, intptr_t v, void
         memcpy(w->chunk, p, v);
         w->chunk[v - 1] = 0;
         g_api->set_param(w->dsp, "state", w->chunk);
+        w->need_update_display = 1;
         return 1;
     }
     default: return 0;
@@ -387,6 +405,7 @@ __attribute__((visibility("default"))) AEffect *VSTPluginMain(audioMasterCallbac
 #endif
     wrap_t *w = calloc(1, sizeof *w);
     if (!w) return NULL;
+    w->last_routing_diag = -1;
     for (int i = 0; i < NPARAMS; i++) w->shadow[i] = -1;
 #ifdef MODULE_SUBDIR
     char data_dir[600], here[512];

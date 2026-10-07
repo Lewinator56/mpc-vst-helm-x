@@ -40,7 +40,8 @@ namespace mopo {
     const int NOTES_PER_OCTAVE = 12;
     const int CENTS_PER_NOTE = 100;
     const int CENTS_PER_OCTAVE = NOTES_PER_OCTAVE * CENTS_PER_NOTE;
-    const int MAX_CENTS = MIDI_SIZE * CENTS_PER_NOTE;
+    const int MAX_MIDI_NOTES = 144;
+    const int MAX_CENTS = MAX_MIDI_NOTES * CENTS_PER_NOTE;
     const mopo_float MAX_Q_POW = 4.0;
     const mopo_float MIN_Q_POW = -1.0;
   }

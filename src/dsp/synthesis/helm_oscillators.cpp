@@ -32,7 +32,7 @@ namespace mopo {
       sqrt(1.0 / 8.0), sqrt(1.0 / 8.0),
   };
 
-  HelmOscillators::HelmOscillators() : Processor(kNumInputs, 2) {
+  HelmOscillators::HelmOscillators() : Processor(kNumInputs, 4) {
     utils::zeroBuffer(oscillator1_cross_mods_, MAX_BUFFER_SIZE + 1);
     utils::zeroBuffer(oscillator2_cross_mods_, MAX_BUFFER_SIZE + 1);
 
@@ -283,8 +283,10 @@ namespace mopo {
     mopo_float scale1 = scales[voices1];
     mopo_float scale2 = scales[voices2];
 
-    mopo_float* dest_left = output(0)->buffer;
-    mopo_float* dest_right = output(1)->buffer;
+    mopo_float* osc1_out_l = output(0)->buffer;
+    mopo_float* osc1_out_r = output(1)->buffer;
+    mopo_float* osc2_out_l = output(2)->buffer;
+    mopo_float* osc2_out_r = output(3)->buffer;
     const mopo_float* amp1 = input(kOscillator1Amplitude)->source->buffer;
     const mopo_float* amp2 = input(kOscillator2Amplitude)->source->buffer;
     const mopo_float* osc1_l = oscillator1_left_totals_;
@@ -294,10 +296,14 @@ namespace mopo {
 
     VECTORIZE_LOOP
     for (int j = 0; j < buffer_size_; ++j) {
-      dest_left[j]  = amp1[j] * scale1 * osc1_l[j] + amp2[j] * scale2 * osc2_l[j];
-      dest_right[j] = amp1[j] * scale1 * osc1_r[j] + amp2[j] * scale2 * osc2_r[j];
-      MOPO_ASSERT(std::isfinite(dest_left[j]));
-      MOPO_ASSERT(std::isfinite(dest_right[j]));
+      osc1_out_l[j] = amp1[j] * scale1 * osc1_l[j];
+      osc1_out_r[j] = amp1[j] * scale1 * osc1_r[j];
+      osc2_out_l[j] = amp2[j] * scale2 * osc2_l[j];
+      osc2_out_r[j] = amp2[j] * scale2 * osc2_r[j];
+      MOPO_ASSERT(std::isfinite(osc1_out_l[j]));
+      MOPO_ASSERT(std::isfinite(osc1_out_r[j]));
+      MOPO_ASSERT(std::isfinite(osc2_out_l[j]));
+      MOPO_ASSERT(std::isfinite(osc2_out_r[j]));
     }
 
     oscillator1_cross_mods_[0] = oscillator1_cross_mods_[buffer_size_];

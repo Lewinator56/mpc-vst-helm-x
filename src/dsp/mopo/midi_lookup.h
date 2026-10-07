@@ -52,6 +52,18 @@ namespace mopo {
         return lookup_.centsLookup(cents_from_0);
       }
 
+      static mopo_float cutoffLookup(mopo_float midi_note) {
+        if (midi_note <= 100.0) {
+          return centsLookup(CENTS_PER_NOTE * midi_note);
+        }
+        mopo_float x = (midi_note - 100.0) / 27.0;
+        mopo_float scaled_note = 100.0 + 27.0 * x + 13.0 * x * x;
+        if (midi_note > 127.0) {
+          scaled_note = 140.0 + (midi_note - 127.0) * (53.0 / 27.0);
+        }
+        return centsLookup(CENTS_PER_NOTE * scaled_note);
+      }
+
     private:
       static const MidiLookupSingleton lookup_;
   };

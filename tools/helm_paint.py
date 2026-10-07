@@ -781,7 +781,12 @@ def paint_helm():
                     parts = name.rsplit("_", 1)
                     state = parts[-1]
                     on = (state == "on")
-                    label = parts[0].rsplit("_", 1)[-1].upper()
+                    last_part = parts[0].rsplit("_", 1)[-1]
+                    # Skip custom image buttons (identified by 8-char hex look ID or node parameter keys)
+                    if (len(last_part) == 8 and all(c in "0123456789abcdefABCDEF" for c in last_part)) or \
+                       any(f.startswith("sh_btn_" + k + "_") for k in ("filter_on", "filter_2_on", "distortion_on", "delay_on", "reverb_on")):
+                        continue
+                    label = last_part.upper()
                     with Image.open(f_path) as orig:
                         w, h = orig.size
                     draw_segment(w, h, label, on).save(f_path, optimize=True)

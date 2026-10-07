@@ -1458,7 +1458,14 @@
         "Osc 1 Pan",
         "Osc 1 Unison Spread",
         "Osc 2 Pan",
-        "Osc 2 Unison Spread"
+        "Osc 2 Unison Spread",
+        "Filter 1 Pan",
+        "Filter 2 Cutoff",
+        "Filter 2 Resonance",
+        "Filter 2 Drive",
+        "Filter 2 Blend",
+        "Filter 2 Env Depth",
+        "Filter 2 Pan"
       ],
       "default": 0
     },
@@ -1553,7 +1560,14 @@
         "Osc 1 Pan",
         "Osc 1 Unison Spread",
         "Osc 2 Pan",
-        "Osc 2 Unison Spread"
+        "Osc 2 Unison Spread",
+        "Filter 1 Pan",
+        "Filter 2 Cutoff",
+        "Filter 2 Resonance",
+        "Filter 2 Drive",
+        "Filter 2 Blend",
+        "Filter 2 Env Depth",
+        "Filter 2 Pan"
       ],
       "default": 0
     },
@@ -1648,7 +1662,14 @@
         "Osc 1 Pan",
         "Osc 1 Unison Spread",
         "Osc 2 Pan",
-        "Osc 2 Unison Spread"
+        "Osc 2 Unison Spread",
+        "Filter 1 Pan",
+        "Filter 2 Cutoff",
+        "Filter 2 Resonance",
+        "Filter 2 Drive",
+        "Filter 2 Blend",
+        "Filter 2 Env Depth",
+        "Filter 2 Pan"
       ],
       "default": 0
     },
@@ -1743,7 +1764,14 @@
         "Osc 1 Pan",
         "Osc 1 Unison Spread",
         "Osc 2 Pan",
-        "Osc 2 Unison Spread"
+        "Osc 2 Unison Spread",
+        "Filter 1 Pan",
+        "Filter 2 Cutoff",
+        "Filter 2 Resonance",
+        "Filter 2 Drive",
+        "Filter 2 Blend",
+        "Filter 2 Env Depth",
+        "Filter 2 Pan"
       ],
       "default": 0
     },
@@ -1838,7 +1866,14 @@
         "Osc 1 Pan",
         "Osc 1 Unison Spread",
         "Osc 2 Pan",
-        "Osc 2 Unison Spread"
+        "Osc 2 Unison Spread",
+        "Filter 1 Pan",
+        "Filter 2 Cutoff",
+        "Filter 2 Resonance",
+        "Filter 2 Drive",
+        "Filter 2 Blend",
+        "Filter 2 Env Depth",
+        "Filter 2 Pan"
       ],
       "default": 0
     },
@@ -1933,7 +1968,14 @@
         "Osc 1 Pan",
         "Osc 1 Unison Spread",
         "Osc 2 Pan",
-        "Osc 2 Unison Spread"
+        "Osc 2 Unison Spread",
+        "Filter 1 Pan",
+        "Filter 2 Cutoff",
+        "Filter 2 Resonance",
+        "Filter 2 Drive",
+        "Filter 2 Blend",
+        "Filter 2 Env Depth",
+        "Filter 2 Pan"
       ],
       "default": 0
     },
@@ -2028,7 +2070,14 @@
         "Osc 1 Pan",
         "Osc 1 Unison Spread",
         "Osc 2 Pan",
-        "Osc 2 Unison Spread"
+        "Osc 2 Unison Spread",
+        "Filter 1 Pan",
+        "Filter 2 Cutoff",
+        "Filter 2 Resonance",
+        "Filter 2 Drive",
+        "Filter 2 Blend",
+        "Filter 2 Env Depth",
+        "Filter 2 Pan"
       ],
       "default": 0
     },
@@ -2123,7 +2172,14 @@
         "Osc 1 Pan",
         "Osc 1 Unison Spread",
         "Osc 2 Pan",
-        "Osc 2 Unison Spread"
+        "Osc 2 Unison Spread",
+        "Filter 1 Pan",
+        "Filter 2 Cutoff",
+        "Filter 2 Resonance",
+        "Filter 2 Drive",
+        "Filter 2 Blend",
+        "Filter 2 Env Depth",
+        "Filter 2 Pan"
       ],
       "default": 0
     },
@@ -2497,6 +2553,140 @@
       "type": "readout",
       "min": 0,
       "max": 1
+    },
+    {
+      "key": "filter_1_pan",
+      "name": "Filter 1 Pan",
+      "min": -1.0,
+      "max": 1.0,
+      "default": 0.0,
+      "unit": "%"
+    },
+    {
+      "key": "filter_2_on",
+      "name": "Filter 2 On",
+      "options": [
+        "Off",
+        "On"
+      ],
+      "default": 1
+    },
+    {
+      "key": "filter_2_style",
+      "name": "Filter 2 Style",
+      "options": [
+        "12 dB",
+        "24 dB",
+        "Shelf"
+      ],
+      "default": 0
+    },
+    {
+      "key": "filter_2_shelf",
+      "name": "Filter 2 Shelf",
+      "options": [
+        "Low Shelf",
+        "Band Shelf",
+        "High Shelf"
+      ],
+      "default": 0
+    },
+    {
+      "key": "filter_2_cutoff",
+      "name": "Filter 2 Cutoff",
+      "min": 28.0,
+      "max": 127.0,
+      "default": 80.0,
+      "unit": "st"
+    },
+    {
+      "key": "filter_2_resonance",
+      "name": "Filter 2 Resonance",
+      "min": 0.0,
+      "max": 1.0,
+      "default": 0.5,
+      "unit": "%"
+    },
+    {
+      "key": "filter_2_drive",
+      "name": "Filter 2 Drive",
+      "min": -12.0,
+      "max": 20.0,
+      "default": 0.0,
+      "unit": "dB"
+    },
+    {
+      "key": "filter_2_blend",
+      "name": "Filter 2 Blend",
+      "min": 0.0,
+      "max": 2.0,
+      "default": 0.0
+    },
+    {
+      "key": "filter_2_env_depth",
+      "name": "Filter 2 Env Depth",
+      "min": -128.0,
+      "max": 128.0,
+      "default": 0.0,
+      "unit": "st"
+    },
+    {
+      "key": "filter_2_keytrack",
+      "name": "Filter 2 Key Track",
+      "min": -1.0,
+      "max": 1.0,
+      "default": 0.0,
+      "unit": "%"
+    },
+    {
+      "key": "filter_2_pan",
+      "name": "Filter 2 Pan",
+      "min": -1.0,
+      "max": 1.0,
+      "default": 0.0,
+      "unit": "%"
+    },
+    {
+      "key": "filter_routing",
+      "name": "Filter Routing",
+      "options": [
+        "Series 1 > 2",
+        "Parallel",
+        "Split 1",
+        "Split 2"
+      ],
+      "default": 0
+    },
+    {
+      "key": "sub_filter_target",
+      "name": "Sub Route",
+      "options": [
+        "Both",
+        "Filter 1",
+        "Filter 2"
+      ],
+      "default": 0
+    },
+    {
+      "key": "noise_filter_target",
+      "name": "Noise Route",
+      "options": [
+        "Both",
+        "Filter 1",
+        "Filter 2"
+      ],
+      "default": 0
+    },
+    {
+      "key": "routing_diagram",
+      "name": "Routing Diagram",
+      "options": [
+        "0", "1", "2", "3", "4", "5", "6", "7", "8",
+        "9", "10", "11", "12", "13", "14", "15", "16", "17",
+        "18", "19", "20", "21", "22", "23", "24", "25", "26",
+        "27", "28", "29", "30", "31", "32", "33", "34", "35"
+      ],
+      "default": 0
     }
   ],
   "sections": [
@@ -2572,9 +2762,21 @@
         "filter_blend",
         "fil_env_depth",
         "keytrack",
-        "formant_on",
-        "formant_x",
-        "formant_y"
+        "filter_1_pan",
+        "filter_2_on",
+        "filter_2_style",
+        "filter_2_shelf",
+        "filter_2_cutoff",
+        "filter_2_resonance",
+        "filter_2_drive",
+        "filter_2_blend",
+        "filter_2_env_depth",
+        "filter_2_keytrack",
+        "filter_2_pan",
+        "filter_routing",
+        "sub_filter_target",
+        "noise_filter_target",
+        "routing_diagram"
       ]
     },
     {

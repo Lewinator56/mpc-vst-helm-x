@@ -215,6 +215,27 @@ namespace mopo {
       PROCESS_TICK_FUNCTION
   };
 
+  // A processor that will convert a stream of cutoff midi to frequencies,
+  // expanding the top end so that 100% open reaches >26 kHz.
+  class CutoffScale : public Operator {
+    public:
+      CutoffScale() : Operator(1, 1) { }
+
+      virtual Processor* clone() const override {
+        return new CutoffScale(*this);
+      }
+
+      inline void tick(int i) override {
+        bufferTick(output()->buffer, input()->source->buffer, i);
+      }
+
+      inline void bufferTick(mopo_float* dest, const mopo_float* source, int i) {
+        dest[i] = MidiLookup::cutoffLookup(source[i]);
+      }
+
+      PROCESS_TICK_FUNCTION
+  };
+
   // A processor that will convert a stream of magnitudes to a stream of
   // q resonance values.
   class ResonanceScale : public Operator {
@@ -892,6 +913,28 @@ namespace mopo {
 
         inline void bufferTick(mopo_float* dest, const mopo_float* source, int i) {
           dest[i] = MidiLookup::centsLookup(CENTS_PER_NOTE * source[i]);
+        }
+    };
+
+    // A processor that will convert a stream of cutoff midi to frequencies.
+    class CutoffScale : public Operator {
+      public:
+        CutoffScale() : Operator(1, 1, true) { }
+
+        virtual Processor* clone() const override {
+          return new CutoffScale(*this);
+        }
+
+        void process() override {
+          tick(0);
+        }
+
+        inline void tick(int i) override {
+          bufferTick(output()->buffer, input()->source->buffer, i);
+        }
+
+        inline void bufferTick(mopo_float* dest, const mopo_float* source, int i) {
+          dest[i] = MidiLookup::cutoffLookup(source[i]);
         }
     };
 

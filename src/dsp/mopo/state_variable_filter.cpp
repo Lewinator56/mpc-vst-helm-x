@@ -57,12 +57,47 @@ namespace mopo {
                                         MIN_RESONANCE, MAX_RESONANCE);
     target_drive_ = input(kDrive)->at(0);
 
+    mopo_float blend = input(kPassBlend)->at(0);
+
+    // Smooth transparent passthrough when the filter is 100% open
+    mopo_float dry_blend = 0.0;
+    if (style != kShelf) {
+      if (blend <= 0.05) {
+        // Low-pass: 100% open at max cutoff (above ~21.5 kHz or 0.48 sample_rate)
+        mopo_float f_full_open = utils::min(22000.0, sample_rate_ * 0.48);
+        mopo_float f_start_blend = utils::min(16000.0, sample_rate_ * 0.36);
+        if (cutoff >= f_full_open) {
+          dry_blend = 1.0;
+        }
+        else if (cutoff > f_start_blend) {
+          mopo_float t = (cutoff - f_start_blend) / (f_full_open - f_start_blend);
+          dry_blend = t * t * (3.0 - 2.0 * t);
+        }
+      }
+      else if (blend >= 1.95) {
+        // High-pass: 100% open at minimum cutoff
+        mopo_float f_full_open = 25.0;
+        mopo_float f_start_blend = 45.0;
+        if (cutoff <= f_full_open) {
+          dry_blend = 1.0;
+        }
+        else if (cutoff < f_start_blend) {
+          mopo_float t = (f_start_blend - cutoff) / (f_start_blend - f_full_open);
+          dry_blend = t * t * (3.0 - 2.0 * t);
+        }
+      }
+
+      if (dry_blend >= 1.0) {
+        processAllPass(audio_buffer, dest);
+        return;
+      }
+    }
+
     if (style == kShelf) {
       Shelves shelf_choice = static_cast<Shelves>(static_cast<int>(input(kShelfChoice)->at(0)));
       computeShelfCoefficients(shelf_choice, cutoff, input(kGain)->at(0));
     }
     else {
-      mopo_float blend = input(kPassBlend)->at(0);
       computePassCoefficients(blend, cutoff, resonance, db24);
     }
 
@@ -75,6 +110,12 @@ namespace mopo {
       process24db(audio_buffer, dest);
     else
       process12db(audio_buffer, dest);
+
+    if (dry_blend > 0.0) {
+      for (int i = 0; i < buffer_size_; ++i) {
+        dest[i] = (1.0 - dry_blend) * dest[i] + dry_blend * audio_buffer[i];
+      }
+    }
   }
 
   void StateVariableFilter::process12db(const mopo_float* audio_buffer, mopo_float* dest) {
@@ -163,7 +204,7 @@ namespace mopo {
     if (db24)
       resonance = sqrt(resonance);
 
-    mopo_float g = tan(PI * utils::min(cutoff / sample_rate_, 0.5));
+    mopo_float g = tan(PI * utils::min(cutoff / sample_rate_, 0.495));
     mopo_float k = 1.0 / resonance;
 
     mopo_float low_pass_amount = sqrt(utils::clamp(1.0 - blend, 0.0, 1.0));
@@ -191,7 +232,7 @@ namespace mopo {
 
     gain = sqrt(gain);
 
-    mopo_float g = tan(PI * utils::min(cutoff / sample_rate_, 0.5));
+    mopo_float g = tan(PI * utils::min(cutoff / sample_rate_, 0.495));
     mopo_float k = 1.0;
 
     switch(choice) {

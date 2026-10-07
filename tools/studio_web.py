@@ -241,10 +241,12 @@ def widget_svg(w, art, params, base_dir):
     elif k == "toggle" and lk:
         x, y, tw, th = ss.toggle_rect(w, base_dir)
         art.ops.append(art.toggle_frame(x + tw / 2, y + th / 2, 0, tw, th, lk))
-        live.append(live_text(w["cx"] - 60, y + th + 4, 120, 20, name, 15, ss.INK))
+        if w.get("label") and w["label"].strip():
+            live.append(live_text(w["cx"] - 60, y + th + 4, 120, 20, name, 15, ss.INK))
     elif k == "toggle":
         art.run("pill|%d|%d|0" % (w["cx"], w["cy"]))
-        live.append(live_text(w["cx"] - 60, w["cy"] - 18 + 34, 120, 20, name, 15, ss.INK))
+        if w.get("label") and w["label"].strip():
+            live.append(live_text(w["cx"] - 60, w["cy"] - 18 + 34, 120, 20, name, 15, ss.INK))
     elif k == "button" and lk:
         x, y, bw, bh = ss.button_rect(w, base_dir)
         art.ops.append(art.button_frame(x, y, bw, bh, 0, w.get("label", ""), lk))

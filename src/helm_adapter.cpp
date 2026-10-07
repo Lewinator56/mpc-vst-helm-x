@@ -114,7 +114,14 @@ static const char* const MOD_DESTS[] = {
     "osc_1_pan",
     "osc_1_unison_spread",
     "osc_2_pan",
-    "osc_2_unison_spread"
+    "osc_2_unison_spread",
+    "filter_1_pan",
+    "filter_2_cutoff",
+    "filter_2_resonance",
+    "filter_2_drive",
+    "filter_2_blend",
+    "filter_2_env_depth",
+    "filter_2_pan"
 };
 static const int NUM_MOD_DESTS = sizeof(MOD_DESTS) / sizeof(MOD_DESTS[0]);
 
@@ -777,6 +784,18 @@ static int helm_get_param(void *inst_ptr, const char *key, char *buf, int buf_le
     }
     if (strcmp(key, "patch_page_text") == 0) {
         return snprintf(buf, buf_len, "PAGE %d/%d", inst->browse_page + 1, inst->browse_page_count());
+    }
+
+    if (strcmp(key, "routing_diagram") == 0) {
+        int f = 0, s = 0, n = 0;
+        if (inst->controls.count("filter_routing")) f = (int)inst->controls["filter_routing"]->value();
+        if (inst->controls.count("sub_filter_target")) s = (int)inst->controls["sub_filter_target"]->value();
+        if (inst->controls.count("noise_filter_target")) n = (int)inst->controls["noise_filter_target"]->value();
+        if (f < 0) f = 0; else if (f > 3) f = 3;
+        if (s < 0) s = 0; else if (s > 2) s = 2;
+        if (n < 0) n = 0; else if (n > 2) n = 2;
+        int idx = f * 9 + s * 3 + n;
+        return snprintf(buf, buf_len, "%d", idx);
     }
 
     if (strcmp(key, "state") == 0) {

@@ -755,13 +755,28 @@ def build(layout_path, params, skin_dir, art_bin, png_from_ppm):
                 # readout/stepper) and strtok() would collapse a genuinely empty field anyway,
                 # so a single space is the baked placeholder when the real label is drawn later.
                 baked_label = " " if TITLE_FONT else w.get("label", "")
-                for state, col in (("off", base), ("on", shade(base, 1.35))):
-                    draw = ("lbtn|%d|%d|%d|%d|%d|%s|%s" % (x, y, bw, bh, state == "on", baked_label, skin_assets.encode(lk))
-                            if lk else "button|%d|%d|%s|%s" % (w["cx"], w["cy"], col, baked_label))
-                    ppm = art("%s_%s" % (img, state))
-                    script += ["clear|" + under(), draw, "crop|%s|%d|%d|%d|%d" % (ppm, x, y, bw, bh)]
-                    if TITLE_FONT and w.get("label"):
-                        label_overlays.append((ppms[-1][1], bw, bh, w["label"], "fdf3ea"))
+                if lk and lk.get("img"):
+                    from PIL import Image
+                    src_off = lk["img"] if os.path.isabs(lk["img"]) else os.path.join(base_dir, lk["img"])
+                    src_on = lk.get("img_on", lk["img"])
+                    if not os.path.isabs(src_on):
+                        src_on = os.path.join(base_dir, src_on)
+                    for src, st in ((src_off, "off"), (src_on, "on")):
+                        dst = os.path.join(skin_dir, "%s_%s.png" % (img, st))
+                        with Image.open(src) as orig:
+                            if orig.size != (bw, bh):
+                                resample_f = getattr(Image, 'Resampling', Image).LANCZOS
+                                orig.resize((bw, bh), resample_f).save(dst)
+                            else:
+                                shutil.copyfile(src, dst)
+                else:
+                    for state, col in (("off", base), ("on", shade(base, 1.35))):
+                        draw = ("lbtn|%d|%d|%d|%d|%d|%s|%s" % (x, y, bw, bh, state == "on", baked_label, skin_assets.encode(lk))
+                                if lk else "button|%d|%d|%s|%s" % (w["cx"], w["cy"], col, baked_label))
+                        ppm = art("%s_%s" % (img, state))
+                        script += ["clear|" + under(), draw, "crop|%s|%d|%d|%d|%d" % (ppm, x, y, bw, bh)]
+                        if TITLE_FONT and w.get("label") and w["label"].strip():
+                            label_overlays.append((ppms[-1][1], bw, bh, w["label"], "fdf3ea"))
                 key = "shTrig_%s_%s%s" % (w["key"], slug(w.get("label", "")), sfx)
                 defs[key] = _local(key, [_action("Mouse Down", "Q-Link"), _action("Enter Pressed", "Toggle Switch")],
                                    [_focus(bw, bh), _button(img + "_on.png", img + "_off.png", 1, 1, bw, bh)])

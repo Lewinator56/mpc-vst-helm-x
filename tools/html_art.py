@@ -325,7 +325,7 @@ class Art:
     def button_frame(self, x, y, w, h, on, label, look):
         """A button drawn from its on/off images, the label on top."""
         o = self.lit(look, on, x, y, w, h, "stretch")
-        if label:
+        if label and label.strip():
             o += self.text(x + w / 2, y + h / 2, label, "button-tx")
         return '<g class="button look-image%s">%s</g>' % (" on" if on else "", o)
 
