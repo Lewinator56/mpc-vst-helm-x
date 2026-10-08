@@ -32,6 +32,8 @@
 
 #include "engine.h"
 #include "popup.h"
+#include "../src/mpc_framebuffer.h"
+#include "../src/mpc_eq_ui.h"
 
 #define DSP_BLOCK 128
 
@@ -194,7 +196,46 @@ static void setParameter(AEffect *e, int32_t i, float n) {
     norm_to_str(p, n, buf, sizeof buf);
     g_api->set_param(w->dsp, PARAMS[i].key, buf);
     w->shadow[i] = (p->int_display && !p->nopts) ? clamp01(n) : -1;
-    if (PARAMS[i].momentary && n > 0.5f) w->holdFrames[i] = PARAMS[i].hold_ms > 0 ? (int)(PARAMS[i].hold_ms * 44.1f) : 1;
+    if (!strncmp(p->key, "eq_", 3)) {
+        mpc_eq_state_t st;
+        memset(&st, 0, sizeof(st));
+        st.master_on = 1;
+        for (int b = 0; b < 5; b++) {
+            st.bands[b].on = 1;
+            st.bands[b].shelf = (b == 0 || b == 4) ? 0 : 1;
+            st.bands[b].q = (b == 0 || b == 4) ? 0.707f : 1.0f;
+        }
+        for (int j = 0; j < NPARAMS; j++) {
+            const char *k = PARAMS[j].key;
+            if (!strcmp(k, "eq_on")) st.master_on = get_norm(w, j) > 0.5f;
+            for (int b = 0; b < 5; b++) {
+                char pat[64];
+                snprintf(pat, sizeof pat, "eq_band_%d_on", b + 1);
+                if (!strcmp(k, pat)) st.bands[b].on = get_norm(w, j) > 0.5f;
+                snprintf(pat, sizeof pat, "eq_band_%d_shelf", b + 1);
+                if (!strcmp(k, pat)) st.bands[b].shelf = (int)lroundf(get_norm(w, j));
+                snprintf(pat, sizeof pat, "eq_band_%d_frequency", b + 1);
+                if (!strcmp(k, pat)) {
+                    float norm_v = get_norm(w, j);
+                    st.bands[b].frequency = PARAMS[j].min + (PARAMS[j].max - PARAMS[j].min) * norm_v;
+                }
+                snprintf(pat, sizeof pat, "eq_band_%d_gain", b + 1);
+                if (!strcmp(k, pat)) {
+                    float norm_v = get_norm(w, j);
+                    st.bands[b].gain_db = PARAMS[j].min + (PARAMS[j].max - PARAMS[j].min) * norm_v;
+                }
+                snprintf(pat, sizeof pat, "eq_band_%d_q", b + 1);
+                if (!strcmp(k, pat)) {
+                    float norm_v = get_norm(w, j);
+                    st.bands[b].q = PARAMS[j].min + (PARAMS[j].max - PARAMS[j].min) * norm_v;
+                }
+            }
+        }
+        mpc_fb_set_eq_state(&st);
+    }
+    if (PARAMS[i].momentary && n > 0.5f) {
+        w->holdFrames[i] = PARAMS[i].hold_ms > 0 ? (int)(PARAMS[i].hold_ms * 44.1f) : 1;
+    }
     if (!nudge) popup_picked(w->open, w->holdFrames, i);   /* a list pick closes it; a Q-Link nudge doesn't */
     w->need_update_display = 1;   /* deferred to processReplacing(), see the step_target branch above */
 }
@@ -235,6 +276,7 @@ static void housekeeping(AEffect *e, int32_t n) {
      * setParameter, so the host is not re-entered from its own call. */
     for (int i = 0; i < NPARAMS; i++)
         if (w->holdFrames[i] > 0 && (w->holdFrames[i] -= n) <= 0) { w->holdFrames[i] = 0; w->master(&w->fx, audioMasterAutomate, i, 0, 0, 0.0f); }
+
     if (w->need_update_display || w->last_routing_diag < 0) {
         char rdiag_buf[16];
         if (g_api->get_param(w->dsp, "routing_diagram", rdiag_buf, sizeof rdiag_buf) > 0) {
@@ -322,6 +364,7 @@ static intptr_t dispatcher(AEffect *e, int32_t op, int32_t idx, intptr_t v, void
     switch (op) {
     case effOpen: return 1;
     case effClose:
+        mpc_fb_cleanup();
         g_api->destroy(w->dsp);
         free(w);
         return 1;
@@ -439,5 +482,7 @@ __attribute__((visibility("default"))) AEffect *VSTPluginMain(audioMasterCallbac
     e->uniqueID = PLUG_UID;
     e->version = PLUG_VERSION;
     e->object = w;
+    mpc_eq_ui_init();
+    mpc_fb_init();
     return e;
 }

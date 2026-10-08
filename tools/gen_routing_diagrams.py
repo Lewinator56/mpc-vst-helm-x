@@ -106,22 +106,25 @@ def draw_box(draw, x, y, w, h, title, subtitle="", border_color=BOX_BORDER, bg_c
 def draw_fx_stack(draw):
     fx_x = 740
     fx_w = 140
-    fx_h = 58
+    fx_h = 56
     
+    # EQUALIZER
+    draw_box(draw, fx_x, 50, fx_w, fx_h, "EQUALIZER", "5-Band EQ", border_color=(0, 220, 255), title_color=TEXT_WHITE)
     # DISTORTION
-    draw_box(draw, fx_x, 75, fx_w, fx_h, "DISTORTION", "Drive / Mix", border_color=(75, 90, 110), title_color=TEXT_WHITE)
+    draw_box(draw, fx_x, 122, fx_w, fx_h, "DISTORTION", "Drive / Mix", border_color=(75, 90, 110), title_color=TEXT_WHITE)
     # DELAY
-    draw_box(draw, fx_x, 165, fx_w, fx_h, "DELAY", "Stereo Ping-Pong", border_color=(75, 90, 110), title_color=TEXT_WHITE)
+    draw_box(draw, fx_x, 194, fx_w, fx_h, "DELAY", "Stereo Ping-Pong", border_color=(75, 90, 110), title_color=TEXT_WHITE)
     # REVERB
-    draw_box(draw, fx_x, 255, fx_w, fx_h, "REVERB", "Damping / Wet", border_color=(75, 90, 110), title_color=TEXT_WHITE)
+    draw_box(draw, fx_x, 266, fx_w, fx_h, "REVERB", "Damping / Wet", border_color=(75, 90, 110), title_color=TEXT_WHITE)
     # STEREO OUT (Output Node)
-    draw_box(draw, fx_x, 345, fx_w, fx_h, "STEREO OUT", "Master L / R", border_color=LINE_CYAN, title_color=TEXT_CYAN)
+    draw_box(draw, fx_x, 338, fx_w, fx_h, "STEREO OUT", "Master L / R", border_color=LINE_CYAN, title_color=TEXT_CYAN)
 
     # Vertical connections with arrows
     mid_x = fx_x + fx_w // 2  # 810
-    draw_arrow(draw, mid_x * SS, (75 + fx_h) * SS, mid_x * SS, 165 * SS, LINE_CYAN)
-    draw_arrow(draw, mid_x * SS, (165 + fx_h) * SS, mid_x * SS, 255 * SS, LINE_CYAN)
-    draw_arrow(draw, mid_x * SS, (255 + fx_h) * SS, mid_x * SS, 345 * SS, LINE_CYAN)
+    draw_arrow(draw, mid_x * SS, (50 + fx_h) * SS, mid_x * SS, 122 * SS, LINE_CYAN)
+    draw_arrow(draw, mid_x * SS, (122 + fx_h) * SS, mid_x * SS, 194 * SS, LINE_CYAN)
+    draw_arrow(draw, mid_x * SS, (194 + fx_h) * SS, mid_x * SS, 266 * SS, LINE_CYAN)
+    draw_arrow(draw, mid_x * SS, (266 + fx_h) * SS, mid_x * SS, 338 * SS, LINE_CYAN)
 
 MODE_NAMES = [
     "MODE 0: SERIES (FILTER 1  >  FILTER 2)",
@@ -219,8 +222,8 @@ def generate_diagram(f_mode, sub_target, noise_target, out_path):
             # Bypasses F1, turns down directly into F2 pin2
             draw_ortho(draw, [(gx_out, noise_cy), (lane_c, noise_cy), (lane_c, f2_pin2), (f2_x, f2_pin2)], LINE_NOISE)
 
-        # F2 output -> DISTORTION
-        draw_ortho(draw, [(f2_x + f2_w, 322), (665, 322), (665, 104), (740, 104)], LINE_CYAN)
+        # F2 output -> EQUALIZER
+        draw_ortho(draw, [(f2_x + f2_w, 322), (665, 322), (665, 78), (740, 78)], LINE_CYAN)
 
     # =========================================================================
     # MODE 1: PARALLEL (OSC 1 -> F1, OSC 2 -> F2, F1+F2 -> SUM -> FX)
@@ -263,8 +266,8 @@ def generate_diagram(f_mode, sub_target, noise_target, out_path):
         # F2 -> SUM (symmetric pitch)
         draw_ortho(draw, [(f2_x + f2_w, 322), (460, 322), (460, 230), (sum_x, 230)], LINE_AMBER)
 
-        # SUM -> DISTORTION
-        draw_ortho(draw, [(sum_x + sum_w, 217), (665, 217), (665, 104), (740, 104)], LINE_CYAN)
+        # SUM -> EQUALIZER
+        draw_ortho(draw, [(sum_x + sum_w, 217), (665, 217), (665, 78), (740, 78)], LINE_CYAN)
 
     # =========================================================================
     # MODE 2: SPLIT 1 (OSC 1 -> F1 -> connection DOWN -> F2, OSC 2 -> F2 only)
@@ -280,19 +283,29 @@ def generate_diagram(f_mode, sub_target, noise_target, out_path):
         draw_ortho(draw, [(gx_out, osc2_cy), (f2_x, f2_pin3)], LINE_AMBER)
 
         # Sub Osc:
-        if sub_target == 0 or sub_target == 1:
+        if sub_target == 0:  # Both
+            draw_ortho(draw, [(gx_out, sub_cy), (lane_d, sub_cy)], LINE_SUB, arrow=False)
+            draw_junction(draw, lane_d, sub_cy, LINE_SUB)
+            draw_ortho(draw, [(lane_d, sub_cy), (lane_d, f1_pin2), (f1_x, f1_pin2)], LINE_SUB)
+            draw_ortho(draw, [(lane_d, sub_cy), (lane_d, f2_pin1), (f2_x, f2_pin1)], LINE_SUB)
+        elif sub_target == 1:  # F1
             draw_ortho(draw, [(gx_out, sub_cy), (lane_d, sub_cy), (lane_d, f1_pin2), (f1_x, f1_pin2)], LINE_SUB)
-        elif sub_target == 2:
+        elif sub_target == 2:  # F2
             draw_ortho(draw, [(gx_out, sub_cy), (lane_d, sub_cy), (lane_d, f2_pin1), (f2_x, f2_pin1)], LINE_SUB)
 
         # Noise:
-        if noise_target == 0 or noise_target == 1:
+        if noise_target == 0:  # Both
+            draw_ortho(draw, [(gx_out, noise_cy), (lane_c, noise_cy)], LINE_NOISE, arrow=False)
+            draw_junction(draw, lane_c, noise_cy, LINE_NOISE)
+            draw_ortho(draw, [(lane_c, noise_cy), (lane_c, f1_pin3), (f1_x, f1_pin3)], LINE_NOISE)
+            draw_ortho(draw, [(lane_c, noise_cy), (lane_c, f2_pin2), (f2_x, f2_pin2)], LINE_NOISE)
+        elif noise_target == 1:  # F1
             draw_ortho(draw, [(gx_out, noise_cy), (lane_c, noise_cy), (lane_c, f1_pin3), (f1_x, f1_pin3)], LINE_NOISE)
-        elif noise_target == 2:
+        elif noise_target == 2:  # F2
             draw_ortho(draw, [(gx_out, noise_cy), (lane_c, noise_cy), (lane_c, f2_pin2), (f2_x, f2_pin2)], LINE_NOISE)
 
-        # F2 output -> DISTORTION
-        draw_ortho(draw, [(f2_x + f2_w, 322), (665, 322), (665, 104), (740, 104)], LINE_CYAN)
+        # F2 output -> EQUALIZER
+        draw_ortho(draw, [(f2_x + f2_w, 322), (665, 322), (665, 78), (740, 78)], LINE_CYAN)
 
     # =========================================================================
     # MODE 3: SPLIT 2 (OSC 2 -> F1 -> connection DOWN -> F2, OSC 1 -> F2 only)
@@ -308,19 +321,29 @@ def generate_diagram(f_mode, sub_target, noise_target, out_path):
         draw_ortho(draw, [(gx_out, osc1_cy), (lane_a, osc1_cy), (lane_a, f2_pin4), (f2_x, f2_pin4)], LINE_CYAN)
 
         # Sub Osc:
-        if sub_target == 0 or sub_target == 1:
+        if sub_target == 0:  # Both
+            draw_ortho(draw, [(gx_out, sub_cy), (lane_d, sub_cy)], LINE_SUB, arrow=False)
+            draw_junction(draw, lane_d, sub_cy, LINE_SUB)
+            draw_ortho(draw, [(lane_d, sub_cy), (lane_d, f1_pin2), (f1_x, f1_pin2)], LINE_SUB)
+            draw_ortho(draw, [(lane_d, sub_cy), (lane_d, f2_pin1), (f2_x, f2_pin1)], LINE_SUB)
+        elif sub_target == 1:  # F1
             draw_ortho(draw, [(gx_out, sub_cy), (lane_d, sub_cy), (lane_d, f1_pin2), (f1_x, f1_pin2)], LINE_SUB)
-        elif sub_target == 2:
+        elif sub_target == 2:  # F2
             draw_ortho(draw, [(gx_out, sub_cy), (lane_d, sub_cy), (lane_d, f2_pin1), (f2_x, f2_pin1)], LINE_SUB)
 
         # Noise:
-        if noise_target == 0 or noise_target == 1:
+        if noise_target == 0:  # Both
+            draw_ortho(draw, [(gx_out, noise_cy), (lane_c, noise_cy)], LINE_NOISE, arrow=False)
+            draw_junction(draw, lane_c, noise_cy, LINE_NOISE)
+            draw_ortho(draw, [(lane_c, noise_cy), (lane_c, f1_pin3), (f1_x, f1_pin3)], LINE_NOISE)
+            draw_ortho(draw, [(lane_c, noise_cy), (lane_c, f2_pin2), (f2_x, f2_pin2)], LINE_NOISE)
+        elif noise_target == 1:  # F1
             draw_ortho(draw, [(gx_out, noise_cy), (lane_c, noise_cy), (lane_c, f1_pin3), (f1_x, f1_pin3)], LINE_NOISE)
-        elif noise_target == 2:
+        elif noise_target == 2:  # F2
             draw_ortho(draw, [(gx_out, noise_cy), (lane_c, noise_cy), (lane_c, f2_pin2), (f2_x, f2_pin2)], LINE_NOISE)
 
-        # F2 output -> DISTORTION
-        draw_ortho(draw, [(f2_x + f2_w, 322), (665, 322), (665, 104), (740, 104)], LINE_CYAN)
+        # F2 output -> EQUALIZER
+        draw_ortho(draw, [(f2_x + f2_w, 322), (665, 322), (665, 78), (740, 78)], LINE_CYAN)
 
     im_resized = im.resize((W, H), Image.LANCZOS)
     im_resized.save(out_path)

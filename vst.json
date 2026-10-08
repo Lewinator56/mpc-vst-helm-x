@@ -57,6 +57,7 @@
       "src/dsp/synthesis/fixed_point_wave.cpp",
       "src/dsp/synthesis/gate.cpp",
       "src/dsp/synthesis/helm_engine.cpp",
+      "src/dsp/synthesis/helm_equalizer.cpp",
       "src/dsp/synthesis/helm_lfo.cpp",
       "src/dsp/synthesis/helm_module.cpp",
       "src/dsp/synthesis/helm_oscillators.cpp",
@@ -65,7 +66,9 @@
       "src/dsp/synthesis/peak_meter.cpp",
       "src/dsp/synthesis/resonance_cancel.cpp",
       "src/dsp/synthesis/trigger_random.cpp",
-      "src/dsp/synthesis/value_switch.cpp"
+      "src/dsp/synthesis/value_switch.cpp",
+      "src/mpc_framebuffer.c",
+      "src/mpc_eq_ui.c"
     ],
     "cflags": [
       "-Isrc",
@@ -77,7 +80,8 @@
     ],
     "libs": [
       "-lm",
-      "-lpthread"
+      "-lpthread",
+      "-ldl"
     ]
   }
 }

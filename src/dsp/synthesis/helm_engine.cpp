@@ -17,6 +17,7 @@
 #include "helm_engine.h"
 
 #include "dc_filter.h"
+#include "helm_equalizer.h"
 #include "helm_lfo.h"
 #include "helm_voice_handler.h"
 #include "peak_meter.h"
@@ -166,6 +167,41 @@ namespace mopo {
 
     addProcessor(voice_handler_);
 
+    // 5-Band Parametric Equalizer
+    HelmEqualizer* equalizer = new HelmEqualizer();
+    equalizer->plug(voice_handler_->output(0), HelmEqualizer::kAudioLeft);
+    equalizer->plug(voice_handler_->output(1), HelmEqualizer::kAudioRight);
+    equalizer->plug(createBaseControl("eq_on"), HelmEqualizer::kOn);
+
+    equalizer->plug(createBaseControl("eq_band_1_on"), HelmEqualizer::kBand1On);
+    equalizer->plug(createBaseControl("eq_band_1_shelf"), HelmEqualizer::kBand1Shelf);
+    equalizer->plug(createBaseControl("eq_band_1_frequency"), HelmEqualizer::kBand1Frequency);
+    equalizer->plug(createBaseControl("eq_band_1_gain"), HelmEqualizer::kBand1Gain);
+    equalizer->plug(createBaseControl("eq_band_1_q"), HelmEqualizer::kBand1Q);
+
+    equalizer->plug(createBaseControl("eq_band_2_on"), HelmEqualizer::kBand2On);
+    equalizer->plug(createBaseControl("eq_band_2_frequency"), HelmEqualizer::kBand2Frequency);
+    equalizer->plug(createBaseControl("eq_band_2_gain"), HelmEqualizer::kBand2Gain);
+    equalizer->plug(createBaseControl("eq_band_2_q"), HelmEqualizer::kBand2Q);
+
+    equalizer->plug(createBaseControl("eq_band_3_on"), HelmEqualizer::kBand3On);
+    equalizer->plug(createBaseControl("eq_band_3_frequency"), HelmEqualizer::kBand3Frequency);
+    equalizer->plug(createBaseControl("eq_band_3_gain"), HelmEqualizer::kBand3Gain);
+    equalizer->plug(createBaseControl("eq_band_3_q"), HelmEqualizer::kBand3Q);
+
+    equalizer->plug(createBaseControl("eq_band_4_on"), HelmEqualizer::kBand4On);
+    equalizer->plug(createBaseControl("eq_band_4_frequency"), HelmEqualizer::kBand4Frequency);
+    equalizer->plug(createBaseControl("eq_band_4_gain"), HelmEqualizer::kBand4Gain);
+    equalizer->plug(createBaseControl("eq_band_4_q"), HelmEqualizer::kBand4Q);
+
+    equalizer->plug(createBaseControl("eq_band_5_on"), HelmEqualizer::kBand5On);
+    equalizer->plug(createBaseControl("eq_band_5_shelf"), HelmEqualizer::kBand5Shelf);
+    equalizer->plug(createBaseControl("eq_band_5_frequency"), HelmEqualizer::kBand5Frequency);
+    equalizer->plug(createBaseControl("eq_band_5_gain"), HelmEqualizer::kBand5Gain);
+    equalizer->plug(createBaseControl("eq_band_5_q"), HelmEqualizer::kBand5Q);
+
+    addProcessor(equalizer);
+
     // Distortion
     Distortion* distortion_left = new Distortion();
     Distortion* distortion_right = new Distortion();
@@ -176,13 +212,13 @@ namespace mopo {
     cr::MagnitudeScale* distortion_gain = new cr::MagnitudeScale();
     distortion_gain->plug(distortion_drive);
 
-    distortion_left->plug(voice_handler_->output(0), Distortion::kAudio);
+    distortion_left->plug(equalizer->output(0), Distortion::kAudio);
     distortion_left->plug(distortion_on, Distortion::kOn);
     distortion_left->plug(distortion_type, Distortion::kType);
     distortion_left->plug(distortion_gain, Distortion::kDrive);
     distortion_left->plug(distortion_mix, Distortion::kMix);
 
-    distortion_right->plug(voice_handler_->output(1), Distortion::kAudio);
+    distortion_right->plug(equalizer->output(1), Distortion::kAudio);
     distortion_right->plug(distortion_on, Distortion::kOn);
     distortion_right->plug(distortion_type, Distortion::kType);
     distortion_right->plug(distortion_gain, Distortion::kDrive);

@@ -99,8 +99,8 @@ def create_filter_button(title, subtitle, accent_color, is_on, out_path):
     final_im = im.resize((W, H), resample_filter)
     final_im.save(out_path, "PNG")
 
-def create_fx_button(title, subtitle, accent_color, is_on, out_path):
-    W, H = 140, 58
+def create_fx_button(title, subtitle, accent_color, is_on, out_path, H=56):
+    W = 140
     SW, SH = W * SS, H * SS
     
     im = Image.new("RGBA", (SW, SH), (0, 0, 0, 0))
@@ -134,18 +134,18 @@ def create_fx_button(title, subtitle, accent_color, is_on, out_path):
     
     # Title
     f_title = get_font(12, bold=True)
-    draw.text((int(62 * SS), int(19 * SS)), title, font=f_title, fill=title_col, anchor="mm")
+    draw.text((int(62 * SS), int(18 * SS)), title, font=f_title, fill=title_col, anchor="mm")
     
     # Subtitle
     f_sub = get_font(9.5, semibold=False)
     sub_text = subtitle if is_on else "Bypassed"
-    draw.text((int(62 * SS), int(38 * SS)), sub_text, font=f_sub, fill=sub_col, anchor="mm")
+    draw.text((int(62 * SS), int(36 * SS)), sub_text, font=f_sub, fill=sub_col, anchor="mm")
     
     # Right-hand side power badge
     bx0 = int(106 * SS)
-    by0 = int(14 * SS)
+    by0 = int(13 * SS)
     bx1 = int(131 * SS)
-    by1 = int(44 * SS)
+    by1 = int(43 * SS)
     draw.rounded_rectangle([bx0, by0, bx1, by1], radius=int(5 * SS),
                            fill=(bg_col[0] // 2, bg_col[1] // 2, bg_col[2] // 2, 255),
                            outline=border_col, width=int(1.5 * SS))
@@ -170,6 +170,7 @@ def main():
     # Colors
     CYAN = (32, 200, 255, 255)
     AMBER = (255, 150, 0, 255)
+    EQ_BLUE = (0, 220, 255, 255)
     DIST_RED = (255, 85, 65, 255)
     DELAY_TEAL = (32, 215, 185, 255)
     REVERB_PURPLE = (175, 125, 255, 255)
@@ -183,6 +184,9 @@ def main():
     create_filter_button("FILTER 2", "Cutoff / Res / Pan", AMBER, False, os.path.join(img_dir, "btn_f2_off.png"))
     
     print("Generating FX button images...")
+    create_fx_button("EQUALIZER", "5-Band EQ", EQ_BLUE, True, os.path.join(img_dir, "btn_eq_on.png"))
+    create_fx_button("EQUALIZER", "5-Band EQ", EQ_BLUE, False, os.path.join(img_dir, "btn_eq_off.png"))
+
     create_fx_button("DISTORTION", "Drive / Mix", DIST_RED, True, os.path.join(img_dir, "btn_dist_on.png"))
     create_fx_button("DISTORTION", "Drive / Mix", DIST_RED, False, os.path.join(img_dir, "btn_dist_off.png"))
     
@@ -192,7 +196,7 @@ def main():
     create_fx_button("REVERB", "Damping / Wet", REVERB_PURPLE, True, os.path.join(img_dir, "btn_reverb_on.png"))
     create_fx_button("REVERB", "Damping / Wet", REVERB_PURPLE, False, os.path.join(img_dir, "btn_reverb_off.png"))
     
-    print("Successfully generated all 10 node button images.")
+    print("Successfully generated all 12 node button images.")
 
 if __name__ == "__main__":
     main()

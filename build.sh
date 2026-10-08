@@ -45,6 +45,7 @@ mkdir -p "$PACKAGE_DIR"
 cp -r "build/skin/$PACKAGE_NAME/"* "$PACKAGE_DIR/"
 cp build/helm.so "$PACKAGE_DIR/"
 cp -r patches "$PACKAGE_DIR/"
+[ -f fb_timing.txt ] && cp fb_timing.txt "$PACKAGE_DIR/"
 if [ -f build/pluginlist-entry.xml ]; then
   sed "s|file=\"[^\"]*helm.so\"|file=\"%payload-path%/$PACKAGE_NAME/helm.so\"|" build/pluginlist-entry.xml > "$PACKAGE_DIR/plugin-meta.xml"
 fi
@@ -55,6 +56,7 @@ python3 ../../mpc-vst-plugins/tools/release.py \
   --entry build/pluginlist-entry.xml \
   --version "1.0.0" \
   --extra "patches:patches" \
+  --extra "fb_timing.txt:fb_timing.txt" \
   --about "HelmX extended polyphonic synthesizer for Akai MPC" \
   --id "helm-x" \
   --repo "Lewinator56/mpc-vst-helm-x" \

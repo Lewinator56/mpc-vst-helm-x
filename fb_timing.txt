@@ -1,0 +1,24 @@
+# HelmX EQ Framebuffer Timing Configuration
+# Editable live on the MPC to adjust display timing and synchronization!
+
+# Loop interval between frames in microseconds (default: 16666 = 60 FPS)
+# Try lower values (e.g. 5000, 2000, 1000) to draw faster than the host repaints
+interval_us=16666
+
+# Timing offset / phase delay in microseconds before drawing (default: 0)
+offset_us=0
+
+# Number of draw bursts per cycle (default: 1, try 2 or 3)
+repeat=1
+
+# Continuous mode (1 = draw in a continuous 1ms loop, 0 = normal interval)
+continuous=0
+
+# Tab detection (1 = only render when on the EQ tab, 0 = render on all pages)
+tab_detect=0
+
+# Screen Y coordinate position (default: 112, shifted down 20px from 92)
+card_y=112
+
+# Debug logging to /tmp/mpc_fb.log (1 = enabled, 0 = disabled)
+debug=1
