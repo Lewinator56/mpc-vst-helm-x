@@ -1,5 +1,7 @@
 #define _GNU_SOURCE
-#include "mpc_framebuffer.h"
+#include "mpc_fb.h"
+#include "plugin_dir.h"
+#include "font8x8.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -9,12 +11,10 @@
 #include <math.h>
 #include <pthread.h>
 #include <time.h>
-#include "../wrapper/plugin_dir.h"
-#include "font8x8.h"
 
-#define SCREEN_W 1280
-#define SCREEN_H 800
-#define SCREEN_STRIDE 1280
+#define SCREEN_W MPC_FB_WIDTH
+#define SCREEN_H MPC_FB_HEIGHT
+#define SCREEN_STRIDE MPC_FB_STRIDE
 
 static pthread_t g_fb_thread;
 static volatile int g_fb_running = 0;
@@ -49,7 +49,7 @@ typedef struct {
     uint32_t offset_us;   /* Offset / delay before drawing in microseconds (default 0) */
     int repeat;           /* Draw burst count (default 1) */
     int continuous;       /* 1 = continuous 1ms draw loop */
-    int tab_detect;       /* 1 = only render when on EQ tab (default 1) */
+    int tab_detect;       /* 1 = only render when on active tab (default 1) */
     int card_y;           /* Y position on screen (default 112) */
     int debug;            /* 1 = verbose logging */
 } fb_timing_cfg_t;
@@ -65,8 +65,8 @@ static fb_timing_cfg_t g_last_cfg = {
 };
 
 static void read_timing_config(fb_timing_cfg_t *cfg, const char *plugin_dir) {
-    cfg->tab_detect = 1; /* Default to checking EQ tab */
-    cfg->card_y = 112;   /* Default to Y=112 (shifted down 20px from 92) */
+    cfg->tab_detect = 1; /* Default to checking tab */
+    cfg->card_y = 112;   /* Default to Y=112 */
     char path[512] = {0};
     FILE *f = NULL;
     if (plugin_dir && plugin_dir[0]) {
@@ -121,7 +121,216 @@ int mpc_fb_tab_detect_enabled(void) {
 }
 
 int mpc_fb_get_card_y(void) {
-    return g_last_cfg.card_y > 0 ? g_last_cfg.card_y : 112;
+    return g_last_cfg.card_y;
+}
+
+/* =========================================================================
+ * Top-Left 4-Pixel Tab Tag Barcode Reader (Screen X=0, Y=110)
+ * Encodes ASCII tab name in 4 pixels: (4 pixels x 3 bytes RGB = 12 characters)
+ * In native hardware BGRA framebuffer: b[2]=Red, b[1]=Green, b[0]=Blue
+ * ========================================================================= */
+
+static inline int color_match(uint8_t r1, uint8_t g1, uint8_t b1, uint8_t r2, uint8_t g2, uint8_t b2, int tol) {
+    return (abs((int)r1 - (int)r2) <= tol &&
+            abs((int)g1 - (int)g2) <= tol &&
+            abs((int)b1 - (int)b2) <= tol);
+}
+
+static int g_last_tag_x = -1;
+static int g_last_tag_y = -1;
+
+int mpc_fb_read_tab_tag(char *out_tag, size_t max_len) {
+    if (!out_tag || max_len == 0) return 0;
+    out_tag[0] = '\0';
+    if (s_num_fbs == 0) return 0;
+
+    for (int i = 0; i < s_num_fbs; ++i) {
+        uintptr_t base = s_fbs[i].start;
+        uintptr_t end = s_fbs[i].end;
+        size_t max_bytes = end - base;
+
+        /* Target search: Read single 4-pixel row at X=0, Y in [108..112] (physical screen Y=110) */
+        for (int y = 108; y <= 112; ++y) {
+            for (int x = 0; x <= 4; x += 4) {
+                size_t offset = ((size_t)y * SCREEN_STRIDE + (size_t)x) * 4;
+                if (offset + 16 > max_bytes) continue;
+
+                const uint8_t *b = (const uint8_t*)(base + offset);
+
+                /* Check BGRA / BGRX native hardware order: b[0]=B, b[1]=G, b[2]=R */
+                char bgr_tag[13];
+                bgr_tag[0]  = (char)b[2];  bgr_tag[1]  = (char)b[1];  bgr_tag[2]  = (char)b[0];
+                bgr_tag[3]  = (char)b[6];  bgr_tag[4]  = (char)b[5];  bgr_tag[5]  = (char)b[4];
+                bgr_tag[6]  = (char)b[10]; bgr_tag[7]  = (char)b[9];  bgr_tag[8]  = (char)b[8];
+                bgr_tag[9]  = (char)b[14]; bgr_tag[10] = (char)b[13]; bgr_tag[11] = (char)b[12];
+                bgr_tag[12] = '\0';
+
+                /* Check RGBA / RGBX order fallback: b[0]=R, b[1]=G, b[2]=B */
+                char rgb_tag[13];
+                rgb_tag[0]  = (char)b[0];  rgb_tag[1]  = (char)b[1];  rgb_tag[2]  = (char)b[2];
+                rgb_tag[3]  = (char)b[4];  rgb_tag[4]  = (char)b[5];  rgb_tag[5]  = (char)b[6];
+                rgb_tag[6]  = (char)b[8];  rgb_tag[7]  = (char)b[9];  rgb_tag[8]  = (char)b[10];
+                rgb_tag[9]  = (char)b[12]; rgb_tag[10] = (char)b[13]; rgb_tag[11] = (char)b[14];
+                rgb_tag[12] = '\0';
+
+                /* List of known synth tab names */
+                static const char *KNOWN_TABS[] = {
+                    "EQUALISER", "EQUALIZER", "EQ", "STEP", "LFO", "ROUTING",
+                    "FILTER", "OSC", "MAIN", "PRESET", "ENV", "MOD", "FX"
+                };
+
+                /* Check BGR native hardware order first */
+                for (size_t t = 0; t < sizeof(KNOWN_TABS)/sizeof(KNOWN_TABS[0]); ++t) {
+                    if (!strncasecmp(bgr_tag, KNOWN_TABS[t], strlen(KNOWN_TABS[t]))) {
+                        snprintf(out_tag, max_len, "%s", bgr_tag);
+                        g_last_tag_x = x;
+                        g_last_tag_y = y;
+                        return 1;
+                    }
+                }
+
+                /* Check RGB order fallback */
+                for (size_t t = 0; t < sizeof(KNOWN_TABS)/sizeof(KNOWN_TABS[0]); ++t) {
+                    if (!strncasecmp(rgb_tag, KNOWN_TABS[t], strlen(KNOWN_TABS[t]))) {
+                        snprintf(out_tag, max_len, "%s", rgb_tag);
+                        g_last_tag_x = x;
+                        g_last_tag_y = y;
+                        return 1;
+                    }
+                }
+
+                /* Fuzzy Color Match (+/- 18 tolerance) for EQUALISER: 'E'(69), 'Q'(81), 'U'(85) */
+                int match_bgr = color_match(b[2], b[1], b[0], 69, 81, 85, 18) &&
+                                color_match(b[6], b[5], b[4], 65, 76, 73, 18);
+                int match_rgb = color_match(b[0], b[1], b[2], 69, 81, 85, 18) &&
+                                color_match(b[4], b[5], b[6], 65, 76, 73, 18);
+
+                if (match_bgr || match_rgb) {
+                    snprintf(out_tag, max_len, "EQUALISER");
+                    g_last_tag_x = x;
+                    g_last_tag_y = y;
+                    return 1;
+                }
+
+                /* General ASCII tag fallback (prioritize BGR order) */
+                if ((bgr_tag[0] >= 'A' && bgr_tag[0] <= 'Z') && (bgr_tag[1] >= 'A' && bgr_tag[1] <= 'Z')) {
+                    snprintf(out_tag, max_len, "%s", bgr_tag);
+                    g_last_tag_x = x;
+                    g_last_tag_y = y;
+                    return 1;
+                }
+                if ((rgb_tag[0] >= 'A' && rgb_tag[0] <= 'Z') && (rgb_tag[1] >= 'A' && rgb_tag[1] <= 'Z')) {
+                    snprintf(out_tag, max_len, "%s", rgb_tag);
+                    g_last_tag_x = x;
+                    g_last_tag_y = y;
+                    return 1;
+                }
+            }
+        }
+    }
+    return 0;
+}
+
+int mpc_fb_get_current_tab(char *out_tab, size_t max_len) {
+    return mpc_fb_read_tab_tag(out_tab, max_len);
+}
+
+int mpc_fb_is_on_tab(const char *tab_name) {
+    if (!g_last_cfg.tab_detect) return 1;
+    if (!tab_name || !tab_name[0]) return 1;
+
+    char current[16] = {0};
+    if (!mpc_fb_read_tab_tag(current, sizeof(current))) {
+        return 0;
+    }
+    return !strncasecmp(current, tab_name, strlen(tab_name));
+}
+
+static int s_eq_tab_state = 0;
+static int s_miss_count = 0;
+static int s_last_logged_state = -1;
+static uint32_t s_log_tick = 0;
+
+int mpc_fb_is_on_eq_tab(void) {
+    if (!g_last_cfg.tab_detect) return 1;
+
+    char tag[16] = {0};
+    int has_tag = mpc_fb_read_tab_tag(tag, sizeof(tag));
+
+    int is_equaliser = 0;
+    if (has_tag) {
+        if (!strncasecmp(tag, "EQUALISER", 9) || !strncasecmp(tag, "EQUALIZER", 9) ||
+            !strncasecmp(tag, "EQ", 2)) {
+            is_equaliser = 1;
+        }
+    }
+
+    if (is_equaliser) {
+        s_miss_count = 0;
+        s_eq_tab_state = 1;
+    } else {
+        s_miss_count++;
+        /* Debounce 2 frames to bridge host page flips */
+        if (s_miss_count >= 2) {
+            s_eq_tab_state = 0;
+        }
+    }
+
+    s_log_tick++;
+    if (g_last_cfg.debug && (s_eq_tab_state != s_last_logged_state || (s_log_tick % 60) == 0)) {
+        s_last_logged_state = s_eq_tab_state;
+
+        /* If tag not found, perform a diagnostic scan inside the VST viewport (Y=80..200) */
+        int found_diag_x = -1, found_diag_y = -1;
+        uint8_t diag_bytes[4] = {0};
+        if (!has_tag && s_num_fbs > 0) {
+            uintptr_t base = s_fbs[0].start;
+            uintptr_t end = s_fbs[0].end;
+            size_t max_bytes = end - base;
+            for (int y = 80; y <= 200 && found_diag_x < 0; y += 1) {
+                for (int x = 0; x < SCREEN_W - 4; x += 4) {
+                    size_t off = ((size_t)y * SCREEN_STRIDE + (size_t)x) * 4;
+                    if (off + 8 > max_bytes) continue;
+                    const uint8_t *pb = (const uint8_t*)(base + off);
+                    if ((color_match(pb[2], pb[1], pb[0], 69, 81, 85, 18) && color_match(pb[6], pb[5], pb[4], 65, 76, 73, 18)) ||
+                        (color_match(pb[0], pb[1], pb[2], 69, 81, 85, 18) && color_match(pb[4], pb[5], pb[6], 65, 76, 73, 18))) {
+                        found_diag_x = x;
+                        found_diag_y = y;
+                        diag_bytes[0] = pb[0]; diag_bytes[1] = pb[1]; diag_bytes[2] = pb[2]; diag_bytes[3] = pb[3];
+                        break;
+                    }
+                }
+            }
+        }
+
+        /* Sample raw bytes at a few representative screen coordinates */
+        uint8_t b_0_86[4] = {0}, b_10_92[4] = {0};
+        if (s_num_fbs > 0) {
+            uintptr_t base = s_fbs[0].start;
+            size_t off1 = (86 * SCREEN_STRIDE + 0) * 4;
+            size_t off2 = (92 * SCREEN_STRIDE + 10) * 4;
+            if (off1 + 4 <= s_fbs[0].end - base) memcpy(b_0_86, (void*)(base + off1), 4);
+            if (off2 + 4 <= s_fbs[0].end - base) memcpy(b_10_92, (void*)(base + off2), 4);
+        }
+
+        char msg[256];
+        if (has_tag) {
+            snprintf(msg, sizeof(msg), "Tab Tag: '%s' (Screen X=%d, Y=%d) -> %s",
+                     tag, g_last_tag_x, g_last_tag_y,
+                     s_eq_tab_state ? "EQ ACTIVATED" : "EQ PAUSED");
+        } else if (found_diag_x >= 0) {
+            snprintf(msg, sizeof(msg), "Tab Tag: '<unknown>' -> EQ PAUSED | DIAG FOUND at Canvas (%d, %d)! bytes: [%d,%d,%d,%d]",
+                     found_diag_x, found_diag_y,
+                     diag_bytes[0], diag_bytes[1], diag_bytes[2], diag_bytes[3]);
+        } else {
+            snprintf(msg, sizeof(msg), "Tab Tag: '<unknown>' -> EQ PAUSED | Screen (0,86)=[%d,%d,%d] (10,92)=[%d,%d,%d]",
+                     b_0_86[0], b_0_86[1], b_0_86[2],
+                     b_10_92[0], b_10_92[1], b_10_92[2]);
+        }
+        log_fb(msg);
+    }
+
+    return s_eq_tab_state;
 }
 
 void mpc_fb_set_render_callback(mpc_fb_render_fn callback) {
@@ -134,42 +343,33 @@ int mpc_fb_is_active(void) {
     return g_fb_running && (s_num_fbs > 0);
 }
 
-void mpc_fb_begin_frame(void) {
-    // Reserved for sync or buffer flips if needed
-}
-
-void mpc_fb_end_frame(void) {
-    // Reserved for flush or cache sync if needed
-}
-
 /* =========================================================================
- * 2D Graphics Drawing Primitives (Direct Screen Coordinates)
+ * 2D Framebuffer Drawing Primitives
  * ========================================================================= */
 
-void mpc_fb_put_pixel(int x, int y, uint32_t argb) {
+void mpc_fb_put_pixel(int x, int y, uint32_t color) {
     if ((unsigned)x >= (unsigned)SCREEN_W || (unsigned)y >= (unsigned)SCREEN_H) return;
     size_t offset = ((size_t)y * SCREEN_STRIDE + (size_t)x) * 4;
     for (int i = 0; i < s_num_fbs; ++i) {
         uintptr_t addr = s_fbs[i].start + offset;
         if (addr + 4 <= s_fbs[i].end) {
-            *(uint32_t*)addr = argb;
+            *(uint32_t*)addr = color;
         }
     }
 }
 
-void mpc_fb_blend_pixel(int x, int y, uint32_t argb) {
+void mpc_fb_blend_pixel(int x, int y, uint32_t color) {
     if ((unsigned)x >= (unsigned)SCREEN_W || (unsigned)y >= (unsigned)SCREEN_H) return;
-    uint32_t sa = (argb >> 24) & 0xFF;
+    uint32_t sa = (color >> 24) & 0xFF;
     if (sa == 0) return;
-    if (sa == 255) {
-        mpc_fb_put_pixel(x, y, argb);
+    if (sa >= 255) {
+        mpc_fb_put_pixel(x, y, color);
         return;
     }
-
-    uint32_t sr = (argb >> 16) & 0xFF;
-    uint32_t sg = (argb >> 8)  & 0xFF;
-    uint32_t sb = (argb >> 0)  & 0xFF;
-    uint32_t inv_sa = 255 - sa;
+    uint32_t sr = (color >> 16) & 0xFF;
+    uint32_t sg = (color >> 8) & 0xFF;
+    uint32_t sb = color & 0xFF;
+    uint32_t da = 255 - sa;
 
     size_t offset = ((size_t)y * SCREEN_STRIDE + (size_t)x) * 4;
     for (int i = 0; i < s_num_fbs; ++i) {
@@ -177,14 +377,14 @@ void mpc_fb_blend_pixel(int x, int y, uint32_t argb) {
         if (addr + 4 <= s_fbs[i].end) {
             uint32_t dst = *(uint32_t*)addr;
             uint32_t dr = (dst >> 16) & 0xFF;
-            uint32_t dg = (dst >> 8)  & 0xFF;
-            uint32_t db = (dst >> 0)  & 0xFF;
+            uint32_t dg = (dst >> 8) & 0xFF;
+            uint32_t db = dst & 0xFF;
 
-            uint32_t out_r = (sr * sa + dr * inv_sa) >> 8;
-            uint32_t out_g = (sg * sa + dg * inv_sa) >> 8;
-            uint32_t out_b = (sb * sa + db * inv_sa) >> 8;
+            uint32_t r = (sr * sa + dr * da) >> 8;
+            uint32_t g = (sg * sa + dg * da) >> 8;
+            uint32_t b = (sb * sa + db * da) >> 8;
 
-            *(uint32_t*)addr = 0xFF000000 | (out_r << 16) | (out_g << 8) | out_b;
+            *(uint32_t*)addr = 0xFF000000 | (r << 16) | (g << 8) | b;
         }
     }
 }
@@ -355,17 +555,18 @@ void mpc_fb_draw_line(int x0, int y0, int x1, int y1, uint32_t color, int thickn
     }
 }
 
-void mpc_fb_draw_circle(int cx, int cy, int radius, uint32_t color, int filled) {
-    if (radius <= 0) return;
-    if (filled) {
-        for (int dy = -radius; dy <= radius; ++dy) {
-            int dx = (int)lroundf(sqrtf((float)(radius * radius - dy * dy)));
-            mpc_fb_draw_hline(cx - dx, cy + dy, 2 * dx + 1, color);
-        }
-    } else {
-        int x = radius, y = 0;
-        int err = 0;
-        while (x >= y) {
+void mpc_fb_draw_circle(int cx, int cy, int r, uint32_t color, int filled) {
+    if (r <= 0) return;
+    int x = r, y = 0;
+    int err = 0;
+
+    while (x >= y) {
+        if (filled) {
+            mpc_fb_draw_hline(cx - x, cy + y, 2 * x + 1, color);
+            mpc_fb_draw_hline(cx - x, cy - y, 2 * x + 1, color);
+            mpc_fb_draw_hline(cx - y, cy + x, 2 * y + 1, color);
+            mpc_fb_draw_hline(cx - y, cy - x, 2 * y + 1, color);
+        } else {
             mpc_fb_put_pixel(cx + x, cy + y, color);
             mpc_fb_put_pixel(cx + y, cy + x, color);
             mpc_fb_put_pixel(cx - y, cy + x, color);
@@ -374,19 +575,24 @@ void mpc_fb_draw_circle(int cx, int cy, int radius, uint32_t color, int filled) 
             mpc_fb_put_pixel(cx - y, cy - x, color);
             mpc_fb_put_pixel(cx + y, cy - x, color);
             mpc_fb_put_pixel(cx + x, cy - y, color);
-            if (err <= 0) { y += 1; err += 2*y + 1; }
-            if (err > 0)  { x -= 1; err -= 2*x + 1; }
+        }
+        if (err <= 0) {
+            y += 1;
+            err += 2 * y + 1;
+        }
+        if (err > 0) {
+            x -= 1;
+            err -= 2 * x + 1;
         }
     }
 }
 
 void mpc_fb_draw_curve(const int *curve_y, int x_start, int x_end, uint32_t color, int thickness) {
     if (!curve_y || x_start >= x_end) return;
-    if (thickness < 1) thickness = 1;
 
     for (int x = x_start; x <= x_end; ++x) {
         int cy = curve_y[x - x_start];
-        for (int t = -(thickness / 2); t <= thickness / 2; ++t) {
+        for (int t = -(thickness/2); t <= thickness/2; ++t) {
             mpc_fb_put_pixel(x, cy + t, color);
         }
         if (x > x_start) {
@@ -405,12 +611,10 @@ void mpc_fb_fill_curve_area(const int *curve_y, int x_start, int x_end, int y_ba
     for (int x = x_start; x <= x_end; ++x) {
         int cy = curve_y[x - x_start];
         if (cy < y_baseline) {
-            // Boost fill: from cy + 1 down to y_baseline - 1
             for (int y = cy + 1; y < y_baseline; ++y) {
                 mpc_fb_blend_pixel(x, y, fill_color);
             }
         } else if (cy > y_baseline) {
-            // Cut fill: from y_baseline + 1 down to cy - 1
             for (int y = y_baseline + 1; y < cy; ++y) {
                 mpc_fb_blend_pixel(x, y, fill_color);
             }
@@ -576,24 +780,4 @@ void mpc_fb_cleanup(void) {
     if (!g_fb_running) return;
     g_fb_running = 0;
     pthread_join(g_fb_thread, NULL);
-}
-
-/* =========================================================================
- * Backward-Compatible State Forwarders (Delegated to mpc_eq_ui)
- * ========================================================================= */
-
-extern void mpc_eq_ui_set_state(const mpc_eq_state_t *state);
-extern void mpc_eq_ui_set_band(int b, int on, int shelf, float freq, float gain, float q);
-extern void mpc_eq_ui_set_master_on(int on);
-
-void mpc_fb_set_eq_state(const mpc_eq_state_t *state) {
-    mpc_eq_ui_set_state(state);
-}
-
-void mpc_fb_set_master_on(int on) {
-    mpc_eq_ui_set_master_on(on);
-}
-
-void mpc_fb_set_band(int b, int on, int shelf, float freq, float gain, float q) {
-    mpc_eq_ui_set_band(b, on, shelf, freq, gain, q);
 }

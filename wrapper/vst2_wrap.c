@@ -32,7 +32,7 @@
 
 #include "engine.h"
 #include "popup.h"
-#include "../src/mpc_framebuffer.h"
+#include "mpc_fb.h"
 #include "../src/mpc_eq_ui.h"
 
 #define DSP_BLOCK 128
@@ -231,7 +231,7 @@ static void setParameter(AEffect *e, int32_t i, float n) {
                 }
             }
         }
-        mpc_fb_set_eq_state(&st);
+        mpc_eq_ui_set_state(&st);
     }
     if (PARAMS[i].momentary && n > 0.5f) {
         w->holdFrames[i] = PARAMS[i].hold_ms > 0 ? (int)(PARAMS[i].hold_ms * 44.1f) : 1;

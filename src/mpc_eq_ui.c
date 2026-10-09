@@ -1,5 +1,6 @@
 #define _GNU_SOURCE
 #include "mpc_eq_ui.h"
+#include "mpc_fb.h"
 #include "font8x8.h"
 
 #include <stdio.h>
@@ -304,6 +305,10 @@ static void buf_draw_text(int x, int y, const char *str, float scale, uint32_t c
 }
 
 void mpc_eq_ui_render(void) {
+    if (!mpc_fb_is_on_eq_tab()) {
+        return;
+    }
+
     init_freq_lut();
 
     mpc_eq_state_t eq;

@@ -77,8 +77,8 @@ CPP_SRCS := \
 
 # C Framebuffer & Wrapper Sources
 C_SRCS := \
-	src/mpc_framebuffer.c \
 	src/mpc_eq_ui.c \
+	wrapper/mpc_fb.c \
 	wrapper/vst2_wrap.c
 
 # Object mapping mirroring source tree inside $(BUILD_DIR)/obj/
@@ -92,7 +92,7 @@ all: $(TARGET) package
 
 $(BUILD_DIR)/params.h: vst.json params.json
 	@mkdir -p $(BUILD_DIR)
-	python3 tools/gen_vst.py vst.json
+	python3 tools/gen_vst.py vst.json --params-h
 
 $(OBJS): | $(BUILD_DIR)/params.h
 

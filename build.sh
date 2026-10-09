@@ -27,7 +27,7 @@ for f in $SOURCES; do
   OBJS="$OBJS $o"
 done
 
-arm-linux-gnueabihf-gcc -O2 -Wall -Wextra -Wno-unused-parameter -fPIC -fvisibility=hidden -std=gnu11 -Ibuild -c wrapper/vst2_wrap.c -o build/vst2_wrap.o
+arm-linux-gnueabihf-gcc -O2 -Wall -Wextra -Wno-unused-parameter -fPIC -fvisibility=hidden -std=gnu11 $CFLAGS -Ibuild -Iwrapper -c wrapper/vst2_wrap.c -o build/vst2_wrap.o
 arm-linux-gnueabihf-g++ -O2 -shared -fPIC -fvisibility=hidden $OBJS build/vst2_wrap.o $LIBS -Wl,--no-undefined -o build/helm.so
 arm-linux-gnueabihf-strip build/helm.so
 

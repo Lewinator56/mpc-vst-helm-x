@@ -1096,6 +1096,26 @@ def build(layout_path, params, skin_dir, art_bin, png_from_ppm):
             img, sw_, sh_, vert, lid = item
         if not vert:
             square_strip(os.path.join(skin_dir, img + ".png"), sw_, sh_)
+    # Automatically stamp 4-pixel ASCII tab identifier barcode (x=0..3, y=0) into each tab background
+    for tab_i, tab in enumerate(tabs_in):
+        tab_name = tab.get("name", "TAB%d" % tab_i).strip().upper()
+        bg_file = os.path.join(skin_dir, "sh_bg_%d.png" % tab_i)
+        if os.path.isfile(bg_file):
+            try:
+                from PIL import Image
+                with Image.open(bg_file) as im:
+                    im = im.convert("RGBA")
+                    raw = tab_name.encode("ascii", "ignore")[:12]
+                    raw = raw + b"\x00" * (12 - len(raw))
+                    for p in range(4):
+                        r = raw[p * 3]
+                        g = raw[p * 3 + 1]
+                        b = raw[p * 3 + 2]
+                        im.putpixel((p, 0), (r, g, b, 255))
+                    im.save(bg_file)
+            except Exception as e:
+                print("Warning: failed to stamp tab tag into %s: %s" % (bg_file, e), file=sys.stderr)
+
     for f in os.listdir(work):
         os.remove(os.path.join(work, f))
     os.rmdir(work)

@@ -15,7 +15,7 @@ repeat=1
 continuous=0
 
 # Tab detection (1 = only render when on the EQ tab, 0 = render on all pages)
-tab_detect=0
+tab_detect=1
 
 # Screen Y coordinate position (default: 112, shifted down 20px from 92)
 card_y=112

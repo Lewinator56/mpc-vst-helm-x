@@ -67,14 +67,15 @@
       "src/dsp/synthesis/resonance_cancel.cpp",
       "src/dsp/synthesis/trigger_random.cpp",
       "src/dsp/synthesis/value_switch.cpp",
-      "src/mpc_framebuffer.c",
-      "src/mpc_eq_ui.c"
+      "src/mpc_eq_ui.c",
+      "wrapper/mpc_fb.c"
     ],
     "cflags": [
       "-Isrc",
       "-Isrc/dsp/mopo",
       "-Isrc/dsp/synthesis",
       "-Isrc/dsp/common",
+      "-Iwrapper",
       "-Wno-ignored-qualifiers",
       "-Wno-sign-compare"
     ],

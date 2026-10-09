@@ -820,6 +820,28 @@ def paint_helm():
 
     print("  Repainted %d flat themed buttons/selectors/toggles/switches." % repainted_count)
 
+    # 2b. Stamp 4-pixel ASCII tab identifier tag as a single row (x=0..3, y=0)
+    tab_tags = {
+        0: "PRESET", 1: "MAIN", 2: "OSC", 3: "FILTER", 4: "ROUTING",
+        5: "ENV", 6: "LFO", 7: "STEP", 8: "MOD", 9: "FX", 10: "EQUALISER"
+    }
+    for tab_i, name in tab_tags.items():
+        bg_file = os.path.join(SKIN_DIR, "sh_bg_%d.png" % tab_i)
+        if os.path.exists(bg_file):
+            try:
+                with Image.open(bg_file) as im:
+                    im = im.convert("RGB")
+                    w, h = im.size
+                    raw = name.encode("ascii")[:12]
+                    raw = raw + b"\x00" * (12 - len(raw))
+                    pixels = [(raw[p * 3], raw[p * 3 + 1], raw[p * 3 + 2]) for p in range(4)]
+                    # Single row of 4 pixels at the very top-left (x=0..3, y=0)
+                    for x in range(4):
+                        im.putpixel((x, 0), pixels[x])
+                    im.save(bg_file, optimize=True)
+            except Exception as e:
+                print("  Failed stamping tab tag on sh_bg_%d.png: %s" % (tab_i, e))
+
     # 3. Restyle TUI component definitions
     for k, v in defs.items():
         # Knobs

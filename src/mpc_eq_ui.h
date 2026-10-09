@@ -2,11 +2,24 @@
 #ifndef MPC_EQ_UI_H
 #define MPC_EQ_UI_H
 
-#include "mpc_framebuffer.h"
+#include "mpc_fb.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+typedef struct {
+    int on;
+    int shelf;       /* 0 = Shelf, 1 = Bell */
+    float frequency; /* Hz */
+    float gain_db;   /* dB (-15.0 .. +15.0) */
+    float q;         /* Q factor (0.2 .. 8.0) */
+} mpc_eq_band_t;
+
+typedef struct {
+    int master_on;
+    mpc_eq_band_t bands[5];
+} mpc_eq_state_t;
 
 /* Initialize the EQ UI and auto-register render callback */
 void mpc_eq_ui_init(void);

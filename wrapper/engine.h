@@ -4,6 +4,7 @@
  * An engine written for another host plugs in through a small adapter (see adapters/). */
 #pragma once
 #include <stdint.h>
+#include "mpc_fb.h"
 
 typedef struct {
     void *(*create)(const char *data_dir);    /* data_dir: MODULE_DIR define, or NULL */
